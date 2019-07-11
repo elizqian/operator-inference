@@ -8,8 +8,8 @@ This code implements the operator learning approach described in
 In the AIAA Aviation 2019 Forum, June 17-21, Dallas, TX. ([Download](https://www.dropbox.com/s/5znea6z1vntby3d/QKMW_aviation19.pdf?dl=0))
 
 The `examples` folder contains scripts that set-up and run several examples:
-* The heat equation example from [1]
-* The Burgers' equation from [1]
+* The heat equation example from [1].
+* The Burgers' equation from [1].
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments.
