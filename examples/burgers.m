@@ -1,10 +1,18 @@
-% Sets up operator inference problem for Burgers equation as described in
+% Elizabeth Qian (elizqian@mit.edu) 11 July 2019
+% -----------------------------------------------------------------------
+% Based on operator inference problem for Burgers equation described in:
 %   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
 %   non-intrusive projection-based model reduction." Computer Methods in
 %   Applied Mechanics and Engineering, 306:196-215, 2016.
 %
 % Note this script only considers one value of the parameter mu (whereas
-% the paper considers multiple values)
+% the above paper considers multiple values)
+%
+% See also:
+%   Qian, E., Kramer, B., Marques, A. and Willcox, K., "Transform & Learn:
+%   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
+%   2019 Forum, June 17-21, Dallas, TX.
+
 clear
 addpath('../')
 
@@ -24,6 +32,7 @@ u_ref = ones(K,1);
 params.modelform = 'LQI';           % model is linear-quadratic with input term
 params.modeltime = 'continuous';    % learn time-continuous model
 params.dt        = dt;              % timestep to compute state time deriv
+params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 
 %% collect data for a series of trajectories with random inputs
 num_inputs = 10;

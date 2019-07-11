@@ -1,7 +1,14 @@
-% Sets up operator inference problem for 1D heat equation as described in
+% Elizabeth Qian (elizqian@mit.edu) 11 July 2019
+% -----------------------------------------------------------------------
+% Based on operator inference problem for 1D heat equation described in:
 %   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
 %   non-intrusive projection-based model reduction." Computer Methods in
 %   Applied Mechanics and Engineering, 306:196-215, 2016.
+%
+% See also:
+%   Qian, E., Kramer, B., Marques, A. and Willcox, K., "Transform & Learn:
+%   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
+%   2019 Forum, June 17-21, Dallas, TX.
 
 clear
 addpath('../')

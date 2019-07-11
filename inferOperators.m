@@ -28,11 +28,24 @@ function [operators] = inferOperators(X, U, Vr, params, dXdt)
 % operators     struct with inferred operators A, H, N, B, C. Terms that
 %               are not part of the model are returned as empty matrices.
 %
-% AUTHORS
-% Elizabeth Qian (elizqian@mit.edu)
+% AUTHOR (CODE)
+% Elizabeth Qian (elizqian@mit.edu) 11 July 2019
+%
+% PUBLICATIONS
+%   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
+%   non-intrusive projection-based model reduction." Computer Methods in
+%   Applied Mechanics and Engineering, 306:196-215, 2016.
+%   
+%   Qian, E., Kramer, B., Marques, A. and Willcox, K., "Transform & Learn:
+%   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
+%   2019 Forum, June 17-21, Dallas, TX.
 
 if ~isfield(params,'dt') & nargin <5
 	error('No dXdt data provided and no timestep provided in params with which to calculate dXdt')
+end
+
+if ~isfield(params,'modeltime') & nargin < 5
+    error('Discrete vs continuous not specified and no RHS provided for LS solve.')
 end
 
 if ~isfield(params,'ddt_order')
@@ -103,11 +116,11 @@ end
 
 % if rhs contains quadratic H*kron(x,x) term
 if contains(modelform,'Q')
-    s = r*(r+1)/2;
     Xsq = get_x_sq(Xhat');
+    s = r*(r+1)/2;
 else
-    s = 0;
     Xsq = [];
+    s = 0;
 end
 
 % if rhs contains constant term
