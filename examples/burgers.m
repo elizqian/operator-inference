@@ -5,7 +5,7 @@
 %
 % Note this script only considers one value of the parameter mu (whereas
 % the paper considers multiple values)
-
+clear
 addpath('../')
 
 %% Problem set-up
@@ -23,10 +23,7 @@ u_ref = ones(K,1);
 %% Operator inference parameters
 params.modelform = 'LQI';           % model is linear-quadratic with input term
 params.modeltime = 'continuous';    % learn time-continuous model
-params.lambda    = 0;               % no regularization penalty
 params.dt        = dt;              % timestep to compute state time deriv
-params.scale     = 0;               % do not scale data in LS solve
-params.implicit  = false;           % treat data as if it comes from explicit integrator
 
 %% collect data for a series of trajectories with random inputs
 num_inputs = 10;

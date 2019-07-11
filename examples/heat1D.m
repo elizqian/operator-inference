@@ -3,6 +3,7 @@
 %   non-intrusive projection-based model reduction." Computer Methods in
 %   Applied Mechanics and Engineering, 306:196-215, 2016.
 
+clear
 addpath('../')
 
 %% Problem set-up
@@ -14,7 +15,7 @@ t       = 0:dt:T; % time points
 
 N = length(x_grid)-2;
 
-u_all = ones(length(t),1);  % Dirichlet BCs (symmetric)
+U = ones(length(t),1);  % Dirichlet BCs (symmetric)
 x0 = zeros(N,1);            % initial condition
 
 M = 10;                     % number of diffusivity values between [0.1, 10] to learn models for
@@ -23,10 +24,8 @@ mu_all = logspace(-1,1,M);  % diffusivity values
 %% Operator inference parameters
 params.modelform = 'LI';            % model is linear with input term
 params.modeltime = 'continuous';    % learn time-continuous model
-params.lambda    = 0;               % no regularization penalty
 params.dt        = dt;              % timestep to compute state time deriv
-params.scale     = 0;               % do not scale data in LS solve
-params.implicit  = true;            % data comes from implicit integrator
+params.ddt_order = 'BE';            % scheme for estimating time derivative
 
 %% Infer operators for reduced models for each value of diffusivity
 all_Ahat = cell(M,1);
@@ -34,29 +33,29 @@ all_Bhat = cell(M,1);
 all_X = cell(M,1);
 all_Vr = cell(M,1);
 
-w = 8;          % maximum model size
+r_max = 8;          % maximum model size
 for i = 1:M
     % run FOM for specified mu to collect data
     mu = mu_all(i);
     [A,B] = getHeatMatrices(N,dx,mu);
-    X = backwardEuler(x0,A,B,u_all,t);
+    X = backwardEuler(x0,A,B,U,t);
     
     % compute POD basis for FOM data
     [Usvd,~,~] = svd(X);
-    Vr = Usvd(:,1:w);
+    Vr = Usvd(:,1:r_max);
     all_X{i} = X;
     all_Vr{i} = Vr;
     
     % infer operators from data
-    operators = inferOperators(X, u_all, Vr, params);
+    operators = inferOperators(X, U, Vr, params);
     all_Ahat{i} = operators.A;
     all_Bhat{i} = operators.B;
 end
 
 %% calculate state and projection errors for different basis sizes
-proj_errors = zeros(w,1);
-state_errors = zeros(w,1);
-for n = 1:w         % loop through basis sizes
+proj_errors = zeros(r_max,1);
+state_errors = zeros(r_max,1);
+for n = 1:r_max         % loop through basis sizes
     for i = 1:M     % loop through different diffusivities
         X  = all_X{i};
         Vr = all_Vr{i}(:,1:n);
@@ -64,7 +63,7 @@ for n = 1:w         % loop through basis sizes
         
         Ahat = all_Ahat{i};
         Bhat = all_Bhat{i};
-        XNhat = backwardEuler(Vr'*x0,Ahat(1:n,1:n),Bhat(1:n,:),u_all,t);
+        XNhat = backwardEuler(Vr'*x0,Ahat(1:n,1:n),Bhat(1:n,:),U,t);
         state_errors(n) = state_errors(n) + 1/M*norm(X-Vr*XNhat,'fro')^1/norm(X,'fro')^1;
     end
 end
