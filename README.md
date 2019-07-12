@@ -8,7 +8,7 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
 ([Download](https://cims.nyu.edu/~pehersto/preprints/Non-intrusive-model-reduction-Peherstorfer-Willcox.pdf))
 <details>
 <summary>BibTeX</summary>
-```
+```tex
 @article{Peherstorfer16DataDriven,
 title = {Data-driven operator inference for nonintrusive projection-based model reduction},
 author = {Peherstorfer, B. and Willcox, K.},
