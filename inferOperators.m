@@ -7,14 +7,15 @@ function [operators] = inferOperators(X, U, Vr, params, dXdt)
 % U         K-by-m input data matrix
 % Vr        N-by-r basis in which to learn reduced model
 % params    struct with operator inference parameters - see PARAMS below
-% rhs       N-b-K optional user-specified RHS for least-squares solve to be used
+% dXdt      N-b-K optional user-specified RHS for least-squares solve to be used
 %           e.g., if user has Xdot data in the continuous time setting or
 %           if data in X is non-uniformly spaced in time
 %
-% PARAMS
+% PARAMETERS - below are the possible fields of the input struct 'params'
 %   modelform   string indicating which terms to learn: e.g. 'LI' corresponds 
 %               to linear model wit input; dxdt = A*x + B*u(t)
-%               Options: 'L'inear, 'Q'uadratic, 'B'ilinear, 'I'nput, 'C'onstant;
+%               Options: 'L'inear, 'Q'uadratic, 'B'ilinear, 'I'nput, 'C'onstant
+%               Order of inputs does not matter, e.g. 'LQI' vs 'QIL'
 %   modeltime   'continuous' e.g., if model form is dxdt = A*x OR 
 %               'discrete' e.g., if model form is x(k+1) = A*x(k)
 %   dt          timestep used to calculate state time deriv for
@@ -40,12 +41,12 @@ function [operators] = inferOperators(X, U, Vr, params, dXdt)
 %   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
 %   2019 Forum, June 17-21, Dallas, TX.
 
-if ~isfield(params,'dt') & nargin <5
-	error('No dXdt data provided and no timestep provided in params with which to calculate dXdt')
-end
-
 if ~isfield(params,'modeltime') & nargin < 5
     error('Discrete vs continuous not specified and no RHS provided for LS solve.')
+end
+
+if ~isfield(params,'dt') & nargin <5 & strcmp(params.modelform,'continuous')
+	error('No dXdt data provided and no timestep provided in params with which to calculate dXdt')
 end
 
 if ~isfield(params,'ddt_order')
@@ -70,7 +71,6 @@ if nargin < 5
             rhs = X(:,2:end)'*Vr;
             ind = 1:(size(X,2)-1);
         case 'continuous'           
-            Xdot = (X(:,2:end) - X(:,1:end-1))/params.dt;
             [Xdot,ind] = ddt(X,params.dt,params.ddt_order);
             rhs = Xdot'*Vr;
     end
