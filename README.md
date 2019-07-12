@@ -37,7 +37,7 @@ The user specifies what types of operators should be fit to the data in the argu
 For a time-continuous model, the aforementioned operators are given in order in:
 
 <img src="https://raw.githubusercontent.com/elizqian/operator-inference/master/modelform.png" alt="$\dot{\hat {\mathbf{x}}} = \hat{\mathbf{A}}\hat{\mathbf{x}} + \hat{\mathbf{H}}(\hat{\mathbf{x}}\otimes\hat{\mathbf{x}}) + \hat{\mathbf{B}}\mathbf{u}(t) + \sum_{i=1}^m\hat{\mathbf{N}}\hat{\mathbf{x}}u_i(t) + \hat{\mathbf{C}}$"
- width=60% align="center"/>
+ width=60% align="middle"/>
 
 For discrete-time models, `inferOperators.m` assumes that the data in `X` are an evenly spaced sequence. 
 To handle other types of data the user can provide the optional argument `rhs` for the least squares solve.
