@@ -1,12 +1,11 @@
-<style>
-
+(setq markdown-xhtml-header-content
+      "<style type='text/css'>
 .myDiv:target{
 
 display:block !important;
 
 }
-
-</style>
+</style>")
 
 # Operator Inference
 
