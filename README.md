@@ -27,9 +27,11 @@ URL = {https://arc.aiaa.org/doi/abs/10.2514/6.2019-3707},
 eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
 }</pre></details>
 
+## Examples
 The `examples` folder contains scripts that set-up and run several examples:
 * The heat equation example from [1].
 * The Burgers' equation from [1].
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
+---
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments.
