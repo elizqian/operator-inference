@@ -19,7 +19,7 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
 [Transform & Learn: A data-driven approach to nonlinear model reduction](https://arc.aiaa.org/doi/10.2514/6.2019-3707).
 In the AIAA Aviation 2019 Forum, June 17-21, Dallas, TX. ([Download](https://www.dropbox.com/s/5znea6z1vntby3d/QKMW_aviation19.pdf?dl=0))<details><summary>BibTeX</summary><pre>
 @inbook{QKMW2019aviation,
-author = {Elizabeth Qian and Boris Kramer and Alexandre N. Marques and Karen E. Willcox},
+author = {Qian, E. and Kramer, B. and Marques, A. N. and Willcox, K. E.},
 title = {Transform \&amp; Learn: A data-driven approach to nonlinear model reduction},
 booktitle = {AIAA Aviation 2019 Forum},
 doi = {10.2514/6.2019-3707},
