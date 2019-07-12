@@ -27,11 +27,20 @@ URL = {https://arc.aiaa.org/doi/abs/10.2514/6.2019-3707},
 eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
 }</pre></details>
 
+## Summary
+The function `inferOperators.m` learns a reduced model for the state data `X` and input data `U` in the reduced space spanned by the columns of `Vr`.
+The data in `X` are projected onto the space defined by the reduced basis `Vr` to obtain the reduced state `Xhat`. 
+The function `inferOperators.m` fits reduced operators to the reduced state data and input data in a least-squares sense.
+The user specifies whether the model is time-discrete or time-continuous in the argument `params.modeltime`.
+The user specifies what types of operators should be fit to the data in the argument `params.modelform`, which should be a string of characters: `L` for linear, `Q` for quadratic, `I` for input, `B` for bilinear, and `C` for constant.
+For discrete-time models, `inferOperators.m` assumes that the data in `X` are an evenly spaced sequence. To more general pairs of data points the user can provide the optional argument `rhs` for the least squares solve.
+For continuous-time models, `inferOperators.m` estimates the time derivative dXdt using the timestep `params.dt` and difference scheme `params.ddt_order`. For non-uniform time-spacing the user can provide the optional argument `rhs` for the least squares solve.
+
 ## Examples
 The `examples` folder contains scripts that set-up and run several examples:
 * The heat equation example from [1].
 * The Burgers' equation from [1].
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
-## Contact
+---
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments.

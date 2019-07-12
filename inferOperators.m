@@ -1,4 +1,4 @@
-function [operators] = inferOperators(X, U, Vr, params, dXdt)
+function [operators] = inferOperators(X, U, Vr, params, rhs)
 % Infers linear, quadratic, bilinear, input, and constant matrix operators
 % for state data in X projected onto basis in Vr and optional input data U.
 % 
@@ -7,7 +7,7 @@ function [operators] = inferOperators(X, U, Vr, params, dXdt)
 % U         K-by-m input data matrix
 % Vr        N-by-r basis in which to learn reduced model
 % params    struct with operator inference parameters - see PARAMS below
-% dXdt      N-b-K optional user-specified RHS for least-squares solve to be used
+% rhs       N-b-K optional user-specified RHS for least-squares solve to be used
 %           e.g., if user has Xdot data in the continuous time setting or
 %           if data in X is non-uniformly spaced in time
 %
@@ -75,7 +75,7 @@ if nargin < 5
             rhs = Xdot'*Vr;
     end
 else
-    rhs = dXdt'*Vr;
+    rhs = rhs'*Vr;
     ind = 1:size(X,2);
 end
 
