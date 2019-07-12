@@ -33,5 +33,5 @@ The `examples` folder contains scripts that set-up and run several examples:
 * The Burgers' equation from [1].
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
----
+## Contact
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments.
