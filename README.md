@@ -13,7 +13,7 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
     volume  = {306},
     pages   = {196-215},
     year    = {2016},
-}</p></details>
+}```</p></details>
 
 2. Qian, E., Kramer, B., Marques, A., and Willcox, K. 
 [Transform & Learn: A data-driven approach to nonlinear model reduction](https://arc.aiaa.org/doi/10.2514/6.2019-3707).
