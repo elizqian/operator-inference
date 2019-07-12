@@ -25,7 +25,7 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
     year    = {2016},
 }</pre></div>
 
-<details><summary>BibTeX</summary><p>```
+<details><summary>BibTeX</summary><pre>
 @article{Peherstorfer16DataDriven,
     title   = {Data-driven operator inference for nonintrusive projection-based model reduction},
     author  = {Peherstorfer, B. and Willcox, K.},
@@ -33,7 +33,7 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
     volume  = {306},
     pages   = {196-215},
     year    = {2016},
-}```</p></details>
+}</pre></details>
 
 2. Qian, E., Kramer, B., Marques, A., and Willcox, K. 
 [Transform & Learn: A data-driven approach to nonlinear model reduction](https://arc.aiaa.org/doi/10.2514/6.2019-3707).
