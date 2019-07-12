@@ -27,7 +27,15 @@ Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
 
 2. Qian, E., Kramer, B., Marques, A., and Willcox, K. 
 [Transform & Learn: A data-driven approach to nonlinear model reduction](https://arc.aiaa.org/doi/10.2514/6.2019-3707).
-In the AIAA Aviation 2019 Forum, June 17-21, Dallas, TX. ([Download](https://www.dropbox.com/s/5znea6z1vntby3d/QKMW_aviation19.pdf?dl=0))
+In the AIAA Aviation 2019 Forum, June 17-21, Dallas, TX. ([Download](https://www.dropbox.com/s/5znea6z1vntby3d/QKMW_aviation19.pdf?dl=0))<details><summary>BibTeX</summary><pre>
+@inbook{QKMW2019aviation,
+author = {Elizabeth Qian and Boris Kramer and Alexandre N. Marques and Karen E. Willcox},
+title = {Transform \&amp; Learn: A data-driven approach to nonlinear model reduction},
+booktitle = {AIAA Aviation 2019 Forum},
+doi = {10.2514/6.2019-3707},
+URL = {https://arc.aiaa.org/doi/abs/10.2514/6.2019-3707},
+eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
+}</pre></details>
 
 The `examples` folder contains scripts that set-up and run several examples:
 * The heat equation example from [1].
