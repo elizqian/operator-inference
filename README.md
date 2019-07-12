@@ -1,6 +1,6 @@
 # Operator Inference
 
-This code implements the operator learning approach described in
+This is a MATLAB implementation of the operator learning approach described in:
 
 1. Peherstorfer, B. and Willcox, K. 
 [Data-driven operator inference for non-intrusive projection-based model reduction.](https://www.sciencedirect.com/science/article/pii/S0045782516301104)
