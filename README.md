@@ -32,12 +32,22 @@ The function `inferOperators.m` learns a reduced model for the state data `X` an
 The data in `X` are projected onto the space defined by the reduced basis `Vr` to obtain the reduced state `Xhat`. 
 Reduced operators are fit to the reduced state data and input data in a least-squares sense.
 
-The user specifies whether the model is time-discrete or time-continuous in the argument `params.modeltime`.
-The user specifies what types of operators should be fit to the data in the argument `params.modelform`, which should be a string of characters: `L` for linear, `Q` for quadratic, `I` for input, `B` for bilinear, and `C` for constant.
-For a time-continuous model, the aforementioned operators are given in order in:
+Supported model forms are given by
 
-<p align="center"><img src="https://raw.githubusercontent.com/elizqian/operator-inference/master/modelform.png" alt="$\dot{\hat {\mathbf{x}}} = \hat{\mathbf{A}}\hat{\mathbf{x}} + \hat{\mathbf{H}}(\hat{\mathbf{x}}\otimes\hat{\mathbf{x}}) + \hat{\mathbf{B}}\mathbf{u}(t) + \sum_{i=1}^m\hat{\mathbf{N}}\hat{\mathbf{x}}u_i(t) + \hat{\mathbf{C}}$"
+<p align="center"><img src="https://raw.githubusercontent.com/elizqian/operator-inference/master/modelform.png" 
+alt="$\dot{\hat {\mathbf{x}}} = \hat{\mathbf{A}}\hat{\mathbf{x}} + \hat{\mathbf{H}}(\hat{\mathbf{x}}\otimes\hat{\mathbf{x}}) + \hat{\mathbf{B}}\mathbf{u}(t) + \sum_{i=1}^m\hat{\mathbf{N}}\hat{\mathbf{x}}u_i(t) + \hat{\mathbf{C}}$"
  width=60%/></p>
+
+in the continuous-time setting, and by
+
+<p align="center"><img src="https://raw.githubusercontent.com/elizqian/operator-inference/master/model_discrete.png" 
+alt="$\hat {\mathbf{x}}_{k+1} = \hat{\mathbf{A}}\hat{\mathbf{x}}_k + \hat{\mathbf{H}}(\hat{\mathbf{x}}_k\otimes\hat{\mathbf{x}}_k) + \hat{\mathbf{B}}\mathbf{u}_k + \sum_{i=1}^m\hat{\mathbf{N}}\hat{\mathbf{x}}_ku_{i,k} + \hat{\mathbf{C}}$"
+width=60%/></p>
+
+in the discrete-time setting.
+
+The user specifies whether the model is time-discrete or time-continuous in the argument `params.modeltime`.
+The user specifies what types of operators should be fit to the data in the argument `params.modelform`, which should be a string of characters: `L` for linear, `Q` for quadratic, `I` for input, `B` for bilinear, and `C` for constant -- these correspond to the matrices A, H, B, N, and C in the models above, respectively.
 
 For discrete-time models, `inferOperators.m` assumes that the data in `X` are an evenly spaced sequence. 
 To handle other types of data the user can provide the optional argument `rhs` for the least squares solve.
