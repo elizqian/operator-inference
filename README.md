@@ -50,8 +50,8 @@ The user specifies what types of operators should be fit to the data in the argu
 For discrete-time models, `inferOperators.m` assumes that the data in `X` are an evenly spaced sequence. 
 To handle other types of data the user can provide the optional argument `rhs` for the least squares solve.
 
-For continuous-time models, `inferOperators.m` estimates the time derivative dXdt using the timestep `params.dt` and difference scheme `params.ddt_order`. 
-For non-uniform time-spacing the user can provide the optional argument `rhs` for the least squares solve.
+For continuous-time models, `inferOperators.m` estimates the time derivative dXdt using the timestep `params.dt` and difference scheme `params.ddt_order`. See `ddt.m` for the implemented difference schemes; users may also implement their own.
+For non-uniform time-spacing, or if exact time derivatives are available, the user can provide the optional argument `rhs` for the least squares solve. In general, exact time derivative data is ideal and should be used when available.
 
 ## Examples
 The `examples` folder contains scripts that set-up and run several examples:
@@ -60,4 +60,4 @@ The `examples` folder contains scripts that set-up and run several examples:
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
 ---
-This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments.
+This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments. [Boris Kramer](http://web.mit.edu/bokramer/www/index.html) also contributed to this code.
