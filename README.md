@@ -36,7 +36,7 @@ The learned model in the continuous-time setting can have any of the terms on th
 
 <p align="center"><img src="https://raw.githubusercontent.com/elizqian/operator-inference/master/modelform.png" 
 alt="$\dot{\hat {\mathbf{x}}} = \hat{\mathbf{A}}\hat{\mathbf{x}} + \hat{\mathbf{H}}(\hat{\mathbf{x}}\otimes\hat{\mathbf{x}}) + \hat{\mathbf{B}}\mathbf{u}(t) + \sum_{i=1}^m\hat{\mathbf{N}}\hat{\mathbf{x}}u_i(t) + \hat{\mathbf{C}}$"
- height=36/></p>
+ height=72/></p>
 
 In the discrete-time setting the learned model can have any of the terms on the right-hand side of the following general model:
 
