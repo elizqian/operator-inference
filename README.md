@@ -1,12 +1,3 @@
-(setq markdown-xhtml-header-content
-      "<style type='text/css'>
-.myDiv:target{
-
-display:block !important;
-
-}
-</style>")
-
 # Operator Inference
 
 This code implements the operator learning approach described in
