@@ -5,7 +5,17 @@ This code implements the operator learning approach described in
 1. Peherstorfer, B. and Willcox, K. 
 [Data-driven operator inference for non-intrusive projection-based model reduction.](https://www.sciencedirect.com/science/article/pii/S0045782516301104)
 Computer Methods in Applied Mechanics and Engineering, 306:196-215, 2016.
-([Download](https://cims.nyu.edu/~pehersto/preprints/Non-intrusive-model-reduction-Peherstorfer-Willcox.pdf))<details><summary>BibTeX</summary><p>```
+([Download](https://cims.nyu.edu/~pehersto/preprints/Non-intrusive-model-reduction-Peherstorfer-Willcox.pdf))
+[<a href="#/" id="PeherstorferDataDriven" onclick="toggle_visibility('Peherstorfer16DataBibTex');">BibTeX</a>]<div style="display: none" id="Peherstorfer16DataBibTex"><pre>@article{Peherstorfer16DataDriven,
+    title   = {Data-driven operator inference for nonintrusive projection-based model reduction},
+    author  = {Peherstorfer, B. and Willcox, K.},
+    journal = {Computer Methods in Applied Mechanics and Engineering},
+    volume  = {306},
+    pages   = {196-215},
+    year    = {2016},
+}</pre></div>
+
+<details><summary>BibTeX</summary><p>```
 @article{Peherstorfer16DataDriven,
     title   = {Data-driven operator inference for nonintrusive projection-based model reduction},
     author  = {Peherstorfer, B. and Willcox, K.},
