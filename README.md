@@ -60,4 +60,4 @@ The `examples` folder contains scripts that set-up and run several examples:
 * The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 
 ---
-This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (elizqian@mit.edu) with any questions or comments. [Boris Kramer](http://web.mit.edu/bokramer/www/index.html) also contributed to this code.
+This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@caltech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) also contributed to this code.
