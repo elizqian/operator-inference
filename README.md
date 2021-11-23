@@ -27,8 +27,7 @@ URL = {https://arc.aiaa.org/doi/abs/10.2514/6.2019-3707},
 eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
 }</pre></details>
 
-3. Qian, E., Kramer, B., Peherstorfer, B., and Willcox, K. [Lift & Learn: Physics-informed machine learning for large-scale nonlinear dynamical systems](https://arxiv.org/abs/1912.08177), Physica D: Nonlinear Phenomena, 2020.
-<details><summary>BibTeX</summary><pre>
+3. Qian, E., Kramer, B., Peherstorfer, B., and Willcox, K. [Lift & Learn: Physics-informed machine learning for large-scale nonlinear dynamical systems](https://arxiv.org/abs/1912.08177), Physica D: Nonlinear Phenomena, 2020.<details><summary>BibTeX</summary><pre>
 @article{qian2020lift,
   title={Lift \& {L}earn: {P}hysics-informed machine learning for large-scale nonlinear dynamical systems},
   author={Qian, E. and Kramer, B. and Peherstorfer, B. and Willcox, K.},
@@ -39,7 +38,7 @@ eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
   publisher={Elsevier}
 }</pre></details>
 
-5. Qian, E., Farcas, I.-G., and Willcox, K. [Reduced operator inference for nonlinear partial differential equations](https://arxiv.org/abs/2102.00083), in revision, 2021.
+4. Qian, E., Farcas, I.-G., and Willcox, K. [Reduced operator inference for nonlinear partial differential equations](https://arxiv.org/abs/2102.00083), in revision, 2021.
 
 ## Summary
 The function `inferOperators.m` learns a reduced model for the state data `X` and input data `U` in the reduced space spanned by the columns of `Vr`.
