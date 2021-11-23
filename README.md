@@ -27,6 +27,20 @@ URL = {https://arc.aiaa.org/doi/abs/10.2514/6.2019-3707},
 eprint = {https://arc.aiaa.org/doi/pdf/10.2514/6.2019-3707}
 }</pre></details>
 
+3. Qian, E., Kramer, B., Peherstorfer, B., and Willcox, K. [Lift & Learn: Physics-informed machine learning for large-scale nonlinear dynamical systems](https://arxiv.org/abs/1912.08177), Physica D: Nonlinear Phenomena, 2020.
+<details><summary>BibTeX</summary><pre>
+@article{qian2020lift,
+  title={Lift \& {L}earn: {P}hysics-informed machine learning for large-scale nonlinear dynamical systems},
+  author={Qian, E. and Kramer, B. and Peherstorfer, B. and Willcox, K.},
+  journal={Physica D: Nonlinear Phenomena},
+  volume={406},
+  pages={132401},
+  year={2020},
+  publisher={Elsevier}
+}</pre></details>
+
+5. Qian, E., Farcas, I.-G., and Willcox, K. [Reduced operator inference for nonlinear partial differential equations](https://arxiv.org/abs/2102.00083), in revision, 2021.
+
 ## Summary
 The function `inferOperators.m` learns a reduced model for the state data `X` and input data `U` in the reduced space spanned by the columns of `Vr`.
 The data in `X` are projected onto the space defined by the reduced basis `Vr` to obtain the reduced state `Xhat`. 
@@ -57,7 +71,8 @@ For non-uniform time-spacing, or if exact time derivatives are available, the us
 The `examples` folder contains scripts that set-up and run several examples:
 * The heat equation example from [1].
 * The Burgers' equation from [1].
-* The Euler equation example from [2]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
+* The Euler equation example from [3]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
+* The heat equation example on a non-uniform grid from [4].
 
 ---
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@caltech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) also contributed to this code.
