@@ -27,6 +27,7 @@ mu = 0.1;               % diffusion coefficient
 % run FOM with input 1s to get reference trajectory
 u_ref = ones(K,1);
 [s_ref,A,B,F] = burgersFOM(N,dt,T_end,mu,u_ref);
+[Uref_svd,~,~] = svd(s_ref,"econ");
 
 %% Operator inference parameters
 params.modelform = 'LQI';           % model is linear-quadratic with input term
@@ -51,9 +52,15 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
+%%
+tdata = 0:dt:T_end;
+xdata = linspace(0,1,N);
+surf(tdata(2:end),xdata,x_all{1},EdgeColor="none",FaceAlpha=0.8);
+
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
 r_vals = 1:10;
-err = zeros(length(r_vals),1);
+err_inf = zeros(length(r_vals),1);
+err_int = zeros(length(r_vals),1);
 for j = 1:length(r_vals)
     r = r_vals(j);
     Vr = U_svd(:,1:r);
@@ -65,14 +72,32 @@ for j = 1:length(r_vals)
 
     s_hat = semiImplicitEuler(Ahat,Fhat,Bhat,dt,u_ref);
     s_rec = Vr(:,1:r)*s_hat;
-    err(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
+    err_inf(j) = norm(s_rec-s_ref,'fro')^2/norm(s_ref,'fro')^2;
+
+    % intrusive
+    rr = r;
+    Ur = Uref_svd(:,1:rr);
+    Aint = Ur' * A * Ur;
+    Bint = Ur' * B;
+    Ln = elimat(N); Dr = dupmat(rr);
+    Fint = Ur' * F * Ln * kron(Ur,Ur) * Dr;
+
+    s_int = semiImplicitEuler(Aint,Fint,Bint,dt,u_ref);
+    s_tmp = Ur(:,1:rr)*s_int;
+    err_int(j) = norm(s_tmp-s_ref,'fro')^2/norm(s_ref,'fro')^2;
 end
 
 figure(2); clf
-semilogy(r_vals,err); grid on
+semilogy(r_vals,err_inf); grid on
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error','Interpreter','LaTeX')
+
+figure(3); clf
+semilogy(r_vals,err_int); grid on
+xlabel('Model size $r$','Interpreter','LaTeX')
+ylabel('Relative state reconstruction error','Interpreter','LaTeX')
+title('Burgers intrusive model error','Interpreter','LaTeX')
 
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
 function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input)
@@ -127,4 +152,36 @@ function [A, B, F] = getBurgersMatrices(N,dx,mu)
 
     % construct input matrix B
     B = [1; zeros(N-2,1); -1];
+end
+
+%% Other
+function D2 = dupmat(n)
+  m   = n * (n + 1) / 2;
+  nsq = n^2;
+  r   = 1;
+  a   = 1;
+  v   = zeros(1, nsq);
+  cn  = cumsum(n:-1:2);   % [EDITED, 2021-08-04], 10% faster
+  for i = 1:n
+     % v(r:r + i - 2) = i - n + cumsum(n - (0:i-2));
+     v(r:r + i - 2) = i - n + cn(1:i - 1);   % [EDITED, 2021-08-04]
+     r = r + i - 1;
+     
+     v(r:r + n - i) = a:a + n - i;
+     r = r + n - i + 1;
+     a = a + n - i + 1;
+  end
+  
+  D2 = sparse(1:nsq, v, 1, nsq, m);
+end
+
+function L = elimat(m)
+  T = tril(ones(m)); % Lower triangle of 1's
+  f = find(T(:)); % Get linear indexes of 1's
+  k = m*(m+1)/2; % Row size of L
+  m2 = m*m; % Colunm size of L
+  L = zeros(m2,k); % Start with L'
+  x = f + m2*(0:k-1)'; % Linear indexes of the 1's within L'
+  L(x) = 1; % Put the 1's in place
+  L = L'; % Now transpose to actual L
 end
