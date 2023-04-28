@@ -13,7 +13,7 @@
 %   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
 %   2019 Forum, June 17-21, Dallas, TX.
 
-clear; clc;
+clear
 addpath('../')
 
 %% Verifications of A B F
@@ -96,7 +96,6 @@ surf(tdata(2:end),xdata,x_all{1},EdgeColor="none",FaceAlpha=0.8);
 r_vals = 1:10;
 err_inf = zeros(length(r_vals),1);
 err_int = zeros(length(r_vals),1);
-
 for j = 1:length(r_vals)
     r = r_vals(j);
     Vr = U_svd(:,1:r);
@@ -111,14 +110,14 @@ for j = 1:length(r_vals)
     err_inf(j) = norm(s_rec-s_ref,'fro')^2/norm(s_ref,'fro')^2;
 
     % intrusive
-    % Aint = Vr' * A * Vr;
-    % Bint = Vr' * B;
-    % Ln = elimat(N); Dr = dupmat(r);
-    % Fint = Vr' * (-F) * Ln * kron(Vr,Vr) * Dr;
+    Aint = Vr' * A * Vr;
+    Bint = Vr' * B;
+    Ln = elimat(N); Dr = dupmat(rr);
+    Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
 
-    % s_int = semiImplicitEuler(Aint,Fint,Bint,dt,u_ref);
-    % s_tmp = Vr(:,1:r)*s_int;
-    % err_int(j) = norm(s_tmp-s_ref,'fro')^2/norm(s_ref,'fro')^2;
+    s_int = semiImplicitEuler(Aint,Fint,Bint,dt,u_ref);
+    s_tmp = Vr(:,1:rr)*s_int;
+    err_int(j) = norm(s_tmp-s_ref,'fro')^2/norm(s_ref,'fro')^2;
 end
 
 figure(2); clf
@@ -127,16 +126,11 @@ xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error','Interpreter','LaTeX')
 
-% figure(3); clf
-% semilogy(r_vals,err_int); grid on
-% xlabel('Model size $r$','Interpreter','LaTeX')
-% ylabel('Relative state reconstruction error','Interpreter','LaTeX')
-% title('Burgers intrusive model error','Interpreter','LaTeX')
-
-%% 
-En = 0.5 * vecnorm(s_rec).^2;
-plot(0.0:dt:T_end,En);
-
+figure(3); clf
+semilogy(r_vals,err_int); grid on
+xlabel('Model size $r$','Interpreter','LaTeX')
+ylabel('Relative state reconstruction error','Interpreter','LaTeX')
+title('Burgers intrusive model error','Interpreter','LaTeX')
 
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
 function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input)
@@ -167,7 +161,7 @@ ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
 s_all = zeros(N,K+1);       % initial state is zero everywhere
 for i = 1:K
     ssq = get_x_sq(s_all(:,i)')';
-    s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] + dt*F*ssq + dt*B*u(i));
+    s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] - dt*F*ssq + dt*B*u(i));
 end
 end
 
@@ -187,7 +181,7 @@ function [A, B, F] = getBurgersMatrices(N,dx,mu)
     jm = mm + 1;        % this is the index of the x_{i-1}*x_i term
     jj = reshape([jp; jm],2*N-4,1);
     vv = reshape([ones(1,N-2); -ones(1,N-2)],2*N-4,1)/(2*dx);
-    F = -sparse(ii,jj,vv,N,N*(N+1)/2);
+    F = sparse(ii,jj,vv,N,N*(N+1)/2);
 
     % construct input matrix B
     B = [1; zeros(N-2,1); -1];
