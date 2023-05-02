@@ -16,9 +16,6 @@
 clear; clc;
 addpath('../')
 
-%% Verifications of A B F
-% [s_ref,A,B,F] = burgersFOM(7,0.2,1.0,0.1,ones(5,1));
-
 %% Problem set-up
 N       = 2^7+1;        % num grid points
 dt      = 1e-4;         % timestep
@@ -39,25 +36,6 @@ params.modeltime = 'continuous';    % learn time-continuous model
 params.dt        = dt;              % timestep to compute state time deriv
 params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 
-%% Check the eigenvalues of A
-% [~, D] = eig(full(A(1:end-1,1:end-1)));
-% D = diag(D);
-
-%% Energy and Energy Constraint Residual
-% En = 0.5 * vecnorm(s_ref).^2;
-% ECR = zeros(1,length(En));
-% for i = length(En)
-%     ECR(i) = s_ref(:,i)' * F * get_x_sq(s_ref(:,i)')';
-% end
-% 
-% fig1 = figure(1);
-% plot(0:dt:T_end,En);
-% 
-% fig2 = figure(2);
-% plot(0:dt:T_end,ECR);
-
-
-
 %% collect data for a series of trajectories with random inputs
 num_inputs = 10;
 U_rand = rand(K,num_inputs);
@@ -65,7 +43,7 @@ x_all = cell(num_inputs,1);
 xdot_all = cell(num_inputs,1);
 for i = 1:num_inputs
     s_rand = burgersFOM(N,dt,T_end,mu,U_rand(:,i));
-    x_all{i}    = s_rand(:,2:end);
+    x_all{i}    = s_rand(:,1:end-1);
     xdot_all{i} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
 end
 X = cat(2,x_all{:});        % concatenate data from random trajectories
@@ -73,32 +51,13 @@ R = cat(2,xdot_all{:});
 U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
-%% Energy and Energy Constraint Residual
-% En = 0.5 * vecnorm(x_all{4}).^2;
-% ECR = zeros(1,length(En));
-% for i = 1:size(s_rand,2)
-%     ECR(i) = s_rand(:,i)' * F * get_x_sq(s_rand(:,i)')';
-% end
-% 
-% fig1 = figure(1);
-% plot(dt:dt:T_end,En);
-% 
-% fig2 = figure(2);
-% plot(0:dt:T_end,ECR);
-
-
-%%
-% tdata = 0:dt:T_end;
-% xdata = linspace(0,1,N);
-% surf(tdata(2:end),xdata,x_all{1},EdgeColor="none",FaceAlpha=0.8);
-
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
 r_vals = 1:15;
 err_inf = zeros(length(r_vals),1);
 err_int = zeros(length(r_vals),1);
 
 % intrusive
-Vr = U_svd(:,1:max(r_vals));
+
 Aint = Vr' * A * Vr;
 Bint = Vr' * B;
 Ln = elimat(N); Dr = dupmat(max(r_vals));
@@ -118,12 +77,6 @@ for j = 1:length(r_vals)
     s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref);
     s_rec = Vr*s_hat;
     err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
-
-%     % intrusive
-%     Aint = Vr' * A * Vr;
-%     Bint = Vr' * B;
-%     Ln = elimat(N); Dr = dupmat(r);
-%     Fint = Vr' * (F) * Ln * kron(Vr,Vr) * Dr;
     
     Fint_extract = extractF(Fint, r);
     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref);
@@ -139,43 +92,37 @@ ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error','Interpreter','LaTeX')
 
 
-%% 
-% En = 0.5 * vecnorm(s_rec).^2;
-% plot(0.0:dt:T_end,En);
-
-
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
 function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input)
-K = size(u_input,1);
-r = size(Ahat,1);
-s_hat = zeros(r,K+1); % initial state is zeros everywhere
-ImdtA = eye(r) - dt*Ahat;
-for i = 1:K
-    ssq = get_x_sq(s_hat(:,i)')';
-    s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
-    if any(isnan(s_hat(:,i+1)))
-        warning(['ROM unstable at ',num2str(i),'th timestep'])
-        break
+    K = size(u_input,1);
+    r = size(Ahat,1);
+    s_hat = zeros(r,K+1); % initial state is zeros everywhere
+    ImdtA = eye(r) - dt*Ahat;
+    for i = 1:K
+        ssq = get_x_sq(s_hat(:,i)')';
+        s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
+        if any(isnan(s_hat(:,i+1)))
+            warning(['ROM unstable at ',num2str(i),'th timestep'])
+            break
+        end
     end
-end
 end
 
 %% solves Burgers equation from zero initial condition with specified input
 function [s_all,A,B,F] = burgersFOM(N,dt,T_end,mu,u)
-dx = 1/(N-1);
-
-K = T_end/dt;
-
-[A,B,F] = getBurgersMatrices(N,dx,mu);
-ImdtA = eye(N)-dt*A;
-ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
-
-s_all = zeros(N,K+1);       % initial state is zero everywhere
-for i = 1:K
-    ssq = get_x_sq(s_all(:,i)')';
-%     s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] + dt*F*ssq + dt*B*u(i));
-    s_all(:,i+1) = ImdtA\(s_all(:,i) + dt*F*ssq + dt*B*u(i));
-end
+    dx = 1/(N-1);
+    
+    K = T_end/dt;
+    
+    [A,B,F] = getBurgersMatrices(N,dx,mu);
+    ImdtA = eye(N)-dt*A;
+    ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
+    
+    s_all = zeros(N,K+1);       % initial state is zero everywhere
+    for i = 1:K
+        ssq = get_x_sq(s_all(:,i)')';
+        s_all(:,i+1) = ImdtA\(s_all(:,i) + dt*F*ssq + dt*B*u(i));
+    end
 end
 
 %% builds matrices for Burgers full-order model

@@ -68,7 +68,6 @@ for i = 1:num_inputs
     x_all{i}    = s_rand(:,2:end);
     xdot_all{i} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
 end
-
 X = cat(2,x_all{:});        % concatenate data from random trajectories
 R = cat(2,xdot_all{:});    
 U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
@@ -94,7 +93,7 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 % surf(tdata(2:end),xdata,x_all{1},EdgeColor="none",FaceAlpha=0.8);
 
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
-r_vals = 2:15;
+r_vals = 1:15;
 err_inf = zeros(length(r_vals),1);
 err_int = zeros(length(r_vals),1);
 
@@ -103,18 +102,20 @@ Vr = U_svd(:,1:max(r_vals));
 Aint = Vr' * A * Vr;
 Bint = Vr' * B;
 Ln = elimat(N); Dr = dupmat(max(r_vals));
-Fint = Vr' * (F) * Ln * kron(Vr,Vr) * Dr;
+Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
+
+% op-inf
+[operators] = inferOperators(X, U, Vr, params, R);
+Ahat = operators.A;
+Fhat = operators.F;
+Bhat = operators.B;
 
 for j = 1:length(r_vals)
     r = r_vals(j);
     Vr = U_svd(:,1:r);
     
-    [operators] = inferOperators(X, U, Vr, params, R);
-    Ahat = operators.A;
-    Fhat = operators.F;
-    Bhat = operators.B;
-    
-    s_hat = semiImplicitEuler(Ahat,Fhat,Bhat,dt,u_ref);
+    Fhat_extract = extractF(Fhat, r);
+    s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref);
     s_rec = Vr*s_hat;
     err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
 
