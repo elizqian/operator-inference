@@ -99,10 +99,10 @@ err_int = zeros(length(r_vals),1);
 
 % intrusive
 Vr = U_svd(:,1:max(r_vals));
-Aint = Vr' * A * Vr;
-Bint = Vr' * B;
-Ln = elimat(N); Dr = dupmat(max(r_vals));
-Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
+% Aint = Vr' * A * Vr;
+% Bint = Vr' * B;
+% Ln = elimat(N); Dr = dupmat(max(r_vals));
+% Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
 
 % op-inf
 [operators] = inferOperators(X, U, Vr, params, R);
@@ -125,15 +125,15 @@ for j = 1:length(r_vals)
 %     Ln = elimat(N); Dr = dupmat(r);
 %     Fint = Vr' * (F) * Ln * kron(Vr,Vr) * Dr;
     
-    Fint_extract = extractF(Fint, r);
-    s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref);
-    s_tmp = Vr*s_int;
-    err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
+%     Fint_extract = extractF(Fint, r);
+%     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref);
+%     s_tmp = Vr*s_int;
+%     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
 end
 
 figure(2); clf
 semilogy(r_vals,err_inf, DisplayName="opinf"); grid on; grid minor; hold on;
-semilogy(r_vals,err_int, DisplayName="int"); hold off;
+% semilogy(r_vals,err_int, DisplayName="int"); hold off;
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error','Interpreter','LaTeX')
@@ -146,36 +146,34 @@ title('Burgers inferred model error','Interpreter','LaTeX')
 
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
 function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input)
-K = size(u_input,1);
-r = size(Ahat,1);
-s_hat = zeros(r,K+1); % initial state is zeros everywhere
-ImdtA = eye(r) - dt*Ahat;
-for i = 1:K
-    ssq = get_x_sq(s_hat(:,i)')';
-    s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
-    if any(isnan(s_hat(:,i+1)))
-        warning(['ROM unstable at ',num2str(i),'th timestep'])
-        break
+    K = size(u_input,1);
+    r = size(Ahat,1);
+    s_hat = zeros(r,K+1); % initial state is zeros everywhere
+    ImdtA = eye(r) - dt*Ahat;
+    for i = 1:K
+        ssq = get_x_sq(s_hat(:,i)')';
+        s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
+        if any(isnan(s_hat(:,i+1)))
+            warning(['ROM unstable at ',num2str(i),'th timestep'])
+            break
+        end
     end
-end
 end
 
 %% solves Burgers equation from zero initial condition with specified input
 function [s_all,A,B,F] = burgersFOM(N,dt,T_end,mu,u)
-dx = 1/(N-1);
+    dx = 1/(N-1);
+    K = T_end/dt;
+    
+    [A,B,F] = getBurgersMatrices(N,dx,mu);
+    ImdtA = eye(N)-dt*A;
+    ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
 
-K = T_end/dt;
-
-[A,B,F] = getBurgersMatrices(N,dx,mu);
-ImdtA = eye(N)-dt*A;
-ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
-
-s_all = zeros(N,K+1);       % initial state is zero everywhere
-for i = 1:K
-    ssq = get_x_sq(s_all(:,i)')';
-%     s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] + dt*F*ssq + dt*B*u(i));
-    s_all(:,i+1) = ImdtA\(s_all(:,i) + dt*F*ssq + dt*B*u(i));
-end
+    s_all = zeros(N,K+1);       % initial state is zero everywhere
+    for i = 1:K
+        ssq = get_x_sq(s_all(:,i)')';
+        s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] + dt*F*ssq + dt*B*u(i));
+    end
 end
 
 %% builds matrices for Burgers full-order model
