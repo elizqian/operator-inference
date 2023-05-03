@@ -54,7 +54,7 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
 r_vals = 1:15;
 err_inf = zeros(length(r_vals),1);
-err_int = zeros(length(r_vals),1);  % MODIFIED
+err_int = zeros(length(r_vals),1);  % MODIFE
 
 for j = 1:length(r_vals)
     r = r_vals(j);
@@ -64,27 +64,22 @@ for j = 1:length(r_vals)
     Ahat = operators.A;
     Fhat = operators.F;
     Bhat = operators.B;
-    
-    % MODIFIED %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     Vr = U_svd(:,1:r);
     Aint = Vr' * A * Vr;
     Bint = Vr' * B;
     Ln = elimat(N); Dr = dupmat(r);
     Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     s_hat = semiImplicitEuler(Ahat,Fhat,Bhat,dt,u_ref);
     s_rec = Vr(:,1:r)*s_hat;
     err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
-    
-    % MODIFIED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     s_int = semiImplicitEuler(Aint,Fint,Bint,dt,u_ref);
     s_tmp = Vr*s_int;
     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
 
-% MODIFIED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure(2); clf
 semilogy(r_vals,err_inf, DisplayName="opinf"); grid on; grid minor; hold on;
 semilogy(r_vals,err_int, DisplayName="int"); 
@@ -92,7 +87,6 @@ hold off; legend(Location="southwest");
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error','Interpreter','LaTeX')
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
