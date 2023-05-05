@@ -119,7 +119,7 @@ K = T_end/dt;
 
 [A,B,F] = getBurgersMatrices(N,dx,mu);
 ImdtA = eye(N)-dt*A;
-ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
+% ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
 
 s_all = zeros(N,K+1);       % initial state is zero everywhere
 for i = 1:K
