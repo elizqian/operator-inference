@@ -106,6 +106,7 @@ function [D,l,c,s,mr] = getDataMatrix(X,Vr,U,ind,modelform)
 K = length(ind);
 r = size(Vr,2);
 Xhat = Vr'*X(:,ind);
+m = size(U,2);
 
 % if rhs contains B*u(t) input term
 if contains(modelform,'I')
