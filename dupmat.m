@@ -4,10 +4,9 @@ function D2 = dupmat(n)
   r   = 1;
   a   = 1;
   v   = zeros(1, nsq);
-  cn  = cumsum(n:-1:2);   % [EDITED, 2021-08-04], 10% faster
+  cn  = cumsum(n:-1:2);  
   for i = 1:n
-     % v(r:r + i - 2) = i - n + cumsum(n - (0:i-2));
-     v(r:r + i - 2) = i - n + cn(1:i - 1);   % [EDITED, 2021-08-04]
+     v(r:r + i - 2) = i - n + cn(1:i - 1);   
      r = r + i - 1;
      
      v(r:r + n - i) = a:a + n - i;

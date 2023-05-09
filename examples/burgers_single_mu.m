@@ -14,7 +14,7 @@ mu = 0.1;
 % run FOM with input 1s to get reference trajectory
 u_ref = ones(K,1);
 
-[A,B,F] = getBurgersMatrices(N,1/(N-1),mu);
+[A,B,F] = getBurgersMatrices(N,1/(N-1),dt,mu);
 s_ref = semiImplicitEuler(A,F,B,dt,u_ref);
 
 %% Surface Plot for verification
@@ -47,7 +47,7 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
-r_vals = 1:15;
+r_vals = 4:15;
 err_inf = zeros(length(r_vals),1);
 err_int = zeros(length(r_vals),1);
 diff = zeros(length(r_vals),1);
@@ -80,6 +80,8 @@ for j = 1:length(r_vals)
     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
 end
 
+
+%% Plotting
 figure(2); clf
 semilogy(r_vals,err_inf, DisplayName="opinf"); grid on; grid minor; hold on;
 semilogy(r_vals,err_int, DisplayName="int"); 
@@ -99,8 +101,9 @@ function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input)
     ImdtA = eye(r) - dt*Ahat;
 
     for i = 1:K
-        ssq = get_x_sq(s_hat(:,i)')';
-        s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
+        s = [0; s_hat(2:r-1,i); 0];
+        ssq = get_x_sq(s')';
+        s_hat(:,i+1) = ImdtA\(s + dt*Fhat*ssq + dt*Bhat*u_input(i));
         if any(isnan(s_hat(:,i+1)))
             warning(['ROM unstable at ',num2str(i),'th timestep'])
             break
@@ -126,10 +129,10 @@ end
 % end
 
 %% builds matrices for Burgers full-order model
-function [A, B, F] = getBurgersMatrices(N,dx,mu)
+function [A, B, F] = getBurgersMatrices(N,dx,dt,mu)
     % construct linear operator resulting from second derivative
     A = mu*gallery('tridiag',N,1,-2,1)/(dx^2);
-    A(1,1:2) = [1 0]; A(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
+    A(1,1:2) = [0 0]; A(N,N-1:N) = [0 0]; % Dirichlet boundary conditions
 
     % construct quadratic operator F using central difference for the
     % derivative
@@ -144,5 +147,5 @@ function [A, B, F] = getBurgersMatrices(N,dx,mu)
     F = -sparse(ii,jj,vv,N,N*(N+1)/2);  % CHANGE: MULTIPLIED BY (-1)
 
     % construct input matrix B
-    B = [1; zeros(N-2,1); -1];
+    B = [1; zeros(N-2,1); -1]/dt;
 end

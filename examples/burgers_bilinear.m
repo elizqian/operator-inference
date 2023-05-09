@@ -63,7 +63,7 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
-r_vals = 4:15;
+r_vals = 1:30;
 err_inf = zeros(length(r_vals),1);
 err_int = zeros(length(r_vals),1);
 
