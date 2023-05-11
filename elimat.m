@@ -6,5 +6,5 @@ function L = elimat(m)
   L = zeros(m2,k); % Start with L'
   x = f + m2*(0:k-1)'; % Linear indexes of the 1's within L'
   L(x) = 1; % Put the 1's in place
-  L = L'; % Now transpose to actual L
+  L = sparse(L'); % Now transpose to actual L
 end

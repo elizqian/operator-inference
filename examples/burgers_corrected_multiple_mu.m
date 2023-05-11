@@ -108,8 +108,8 @@ for i = 1:M
 end
 
 %% Plot relative state error
-err_inf_avg = mean(err_inf);
-err_int_avg = mean(err_int);
+err_inf_avg = mean(err_inf(2:end,:));
+err_int_avg = mean(err_int(2:end,:));
 
 figure(1); clf;
 semilogy(r_vals(1:14),err_inf_avg(1:14), DisplayName="opinf"); grid on; grid minor; hold on;

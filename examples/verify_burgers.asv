@@ -1,20 +1,3 @@
-% Elizabeth Qian (elizqian@mit.edu) 11 July 2019
-% Tomoki Koike (tkoike3@gatech.edu) 10 May 2023 [EDITED]
-%
-% -----------------------------------------------------------------------
-% Based on operator inference problem for Burgers equation described in:
-%   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
-%   non-intrusive projection-based model reduction." Computer Methods in
-%   Applied Mechanics and Engineering, 306:196-215, 2016.
-%
-% Note this script only considers one value of the parameter mu (whereas
-% the above paper considers multiple values)
-%
-% See also:
-%   Qian, E., Kramer, B., Marques, A. and Willcox, K., "Transform & Learn:
-%   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
-%   2019 Forum, June 17-21, Dallas, TX.
-
 clear; clc;
 addpath('../')
 
@@ -24,7 +7,7 @@ dt      = 1e-4;         % timestep
 T_end   = 1;            % final time
 K       = T_end/dt;     % num time steps
 
-mu = 0.7;               % diffusion coefficient
+mu = 0.1;               % diffusion coefficient
 type = 1;
 
 % run FOM with input 1s to get reference trajectory
@@ -51,6 +34,21 @@ view(-73.25,38.649)
 grid on
 text(0.1,0.8,1,"\mu = "+num2str(mu),'FontSize',14);
 
+%% Slice of surface plot (time)
+figure(2);
+plot(0,0,MarkerSize=0.01)
+hold on; grid on; grid minor; box on;
+omega = linspace(0,1.0,N);
+cmap = jet(length(1:floor(K/10):K));
+ct = 1;
+for i = 1:floor(K/10):K
+    plot(omega,s_ref(:,i),Color=cmap(ct,:),DisplayName="$");
+    ct = ct + 1;
+end
+hold off;
+xlabel("\omega, space")
+ylabel("x, velocity")
+title("Burgers' plot sliced by time")
 
 %% Plot the Energy
 figure(2);
@@ -61,25 +59,23 @@ grid on; grid minor; box on;
 title("Energy over time of Burgers' Equation")
 
 %% Check the Constraint Residual (H)
-CR_h = crh(H)
+CR_h = crh(H);
 
 %% Check the Constraint Residual (F)
-CR_f = crf(F)
+CR_f = crf(F);
 
 %% Plot the energy constraint residual (H)
 ECR_h = ecr(H, s_ref);
 ECR_f = ecr(F, s_ref);
 
 figure(3);
-plot(linspace(0.0,T_end,K+1), ECR_h, DisplayName="H")
-plot(linspace(0.0,T_end,K+1), ECR_f, DisplayName="F")
-
-
-%% Operator inference parameters
-params.modelform = 'LQI';           % model is linear-quadratic with input term
-params.modeltime = 'continuous';    % learn time-continuous model
-params.dt        = dt;              % timestep to compute state time deriv
-params.ddt_order = '1ex';           % explicit 1st order timestep scheme
+plot(linspace(0.0,T_end,K+1), ECR_h, DisplayName="H", LineWidth=4, Color="b")
+hold on; grid on; grid minor; box on;
+plot(linspace(0.0,T_end,K+1), ECR_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+hold off; legend(Location="best");
+xlabel("t, time")
+ylabel("Energy")
+title("Energy Constraint Residual over time of Burgers' Equation")
 
 %% collect data for a series of trajectories with random inputs
 num_inputs = 10;
@@ -100,8 +96,9 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
 r_vals = 1:25;
-err_inf = zeros(length(r_vals),1);  % relative state error for inferred model
 err_int = zeros(length(r_vals),1);  % for intrusive model
+s_int_all = cell(length(r_vals));
+s_tmp_all = cell(length(r_vals));
 
 % intrusive
 Vr = U_svd(:,1:max(r_vals));
@@ -110,52 +107,17 @@ Bint = Vr' * B;
 Ln = elimat(N); Dr = dupmat(max(r_vals));
 Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
 
-% op-inf
-[operators] = inferOperators(X, U, Vr, params, R);
-Ahat = operators.A;
-Fhat = operators.F;
-Bhat = operators.B;
-
 for j = 1:length(r_vals)
     r = r_vals(j);
     Vr = U_svd(:,1:r);
-
-%     % intrusive
-%     Aint = Vr' * A * Vr;
-%     Bint = Vr' * B;
-%     Ln = elimat(N); Dr = dupmat(r);
-%     Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
-%     
-%     % op-inf
-%     [operators] = inferOperators(X, U, Vr, params, R);
-%     Ahat = operators.A;
-%     Fhat = operators.F;
-%     Bhat = operators.B;
-
-    Fhat_extract = extractF(Fhat, r);
-    s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
-    s_rec = Vr*s_hat;
-%     s_hat = semiImplicitEuler(Ahat,Fhat,Bhat,dt,u_ref,Vr'*IC);
-%     s_rec = Vr*s_hat;
-    err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
     
     Fint_extract = extractF(Fint, r);
     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
     s_tmp = Vr*s_int;
-%     s_int = semiImplicitEuler(Aint,Fint,Bint,dt,u_ref,Vr'*IC);
-%     s_tmp = Vr*s_int;
     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
+    s_int_all(i) = s_int;
+    s_tmp_all(i) = s_tmp;
 end
-
-%% Plotting
-figure(3); clf
-cutoff = 1:15;
-semilogy(r_vals(cutoff),err_inf(cutoff), DisplayName="opinf"); grid on; grid minor; hold on;
-semilogy(r_vals(cutoff),err_int(cutoff), DisplayName="int"); 
-hold off; legend(Location="southwest");
-xlabel('Model size $r$','Interpreter','LaTeX')
-ylabel('Relative state reconstruction error','Interpreter','LaTeX')
-title('Burgers inferred model error','Interpreter','LaTeX')
 
 %% semi-implicit Euler scheme for integrating learned model from zero initial condition
 function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input, IC)
@@ -198,7 +160,7 @@ function [A, B, F] = getBurgersMatrices(N,dx,dt,mu)
     B = [1; zeros(N-2,1); -1]/dt;
 end
 
-%% 
+%% Other Functions
 function del = delta(i,j)
     if i == j
         del = 1.0;
