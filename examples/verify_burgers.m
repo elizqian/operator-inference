@@ -1,4 +1,4 @@
-clear; clc;
+clear; clc; close all;
 addpath('../')
 
 %% Problem set-up
@@ -7,8 +7,8 @@ dt      = 1e-4;         % timestep
 T_end   = 1;            % final time
 K       = T_end/dt;     % num time steps
 
-mu = 0.5;               % diffusion coefficient
-type = 1;
+mu = 0.1;               % diffusion coefficient
+type = 2;
 
 % run FOM with input 1s to get reference trajectory
 if type == 1
@@ -48,7 +48,7 @@ end
 hold off; legend(Interpreter="latex");
 xlabel("\omega, space")
 ylabel("x, velocity")
-title("Burgers' plot sliced by time")
+title("Burgers' plot sliced by time \mu="+num2str(mu))
 
 %% Slice of surface plot (space)
 figure(3);
@@ -64,10 +64,10 @@ end
 hold off; legend(Interpreter="latex");
 xlabel("t, time")
 ylabel("x, velocity")
-title("Burgers' plot sliced by space")
+title("Burgers' plot sliced by space \mu="+num2str(mu))
 
 %% Plot the Energy
-figure(2);
+figure(4);
 plot(linspace(0.0,T_end,K+1), vecnorm(s_ref))
 xlabel("t, time")
 ylabel("Energy")
@@ -84,7 +84,7 @@ CR_f = crf(F);
 ECR_h = ecr(H, s_ref);
 ECR_f = ecr(F, s_ref);
 
-figure(3);
+figure(5);
 plot(linspace(0.0,T_end,K+1), ECR_h, DisplayName="H", LineWidth=4, Color="b")
 hold on; grid on; grid minor; box on;
 plot(linspace(0.0,T_end,K+1), ECR_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
