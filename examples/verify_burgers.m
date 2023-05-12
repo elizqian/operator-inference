@@ -1,15 +1,17 @@
 clear; clc; close all;
-addpath('../')
+addpath('../', "burgers-helpers/");
 
 %% Problem set-up
-N       = 2^7+1;        % num grid points
-dt      = 1e-4;         % timestep
-T_end   = 1;            % final time
-K       = T_end/dt;     % num time steps
+N       = 2^7+1;                  % num grid points
+dt      = 1e-4;                   % timestep
+T_end   = 1;                      % final time
+K       = T_end/dt;               % num time steps
+tspan = linspace(0.0,T_end,K+1);  % time span
+sspan = linspace(0,1.0,N);        % spatial span
 
-mu = 0.1;               % diffusion coefficient
+mu = 0.3;               % diffusion coefficient
+
 type = 2;
-
 % run FOM with input 1s to get reference trajectory
 if type == 1
     u_ref = ones(K,1);
@@ -18,7 +20,8 @@ else
     u_ref = zeros(K,1);
     IC = sin(pi * linspace(0,1,N))';
 end
-[A, B, F] = getBurgersMatrices(N,1/(N-1),dt,mu);
+
+[A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
 H = F2Hs(F);
 s_ref = semiImplicitEuler(A, F, B, dt, u_ref, IC);
 
@@ -38,11 +41,10 @@ text(0.1,0.8,1,"\mu = "+num2str(mu),'FontSize',14);
 figure(2);
 plot(0,0,MarkerSize=0.01,HandleVisibility="off")
 hold on; grid on; grid minor; box on;
-omega = linspace(0,1.0,N);
 cmap = jet(length(1:floor(K/10):K+1));
 ct = 1;
 for i = 1:floor(K/10):K+1
-    plot(omega,s_ref(:,i),Color=cmap(ct,:),DisplayName="$t="+num2str(i)+"$");
+    plot(sspan,s_ref(:,i),Color=cmap(ct,:),DisplayName="$t="+num2str(i)+"$");
     ct = ct + 1;
 end
 hold off; legend(Interpreter="latex");
@@ -54,11 +56,10 @@ title("Burgers' plot sliced by time \mu="+num2str(mu))
 figure(3);
 plot(0,0,MarkerSize=0.01,HandleVisibility="off")
 hold on; grid on; grid minor; box on;
-t = linspace(0,1.0,K+1);
 cmap = jet(length(1:floor(N/10):N+1));
 ct = 1;
 for i = 1:floor(N/10):N+1
-    plot(t,s_ref(i,:),Color=cmap(ct,:),DisplayName="$x="+num2str(i)+"$");
+    plot(tspan,s_ref(i,:),Color=cmap(ct,:),DisplayName="$x="+num2str(i)+"$");
     ct = ct + 1;
 end
 hold off; legend(Interpreter="latex");
@@ -68,34 +69,64 @@ title("Burgers' plot sliced by space \mu="+num2str(mu))
 
 %% Plot the Energy
 figure(4);
-plot(linspace(0.0,T_end,K+1), vecnorm(s_ref))
+plot(tspan, vecnorm(s_ref).^2/2)
 xlabel("t, time")
 ylabel("Energy")
 grid on; grid minor; box on;
 title("Energy over time of Burgers' Equation")
 
 %% Check the Constraint Residual (H)
-CR_h = crh(H);
+CR_h = constraintResidual_H(H);
 
 %% Check the Constraint Residual (F)
-CR_f = crf(F);
+CR_f = constraintResidual_F(F);
 
-%% Plot the energy constraint residual (H)
-ECR_h = ecr(H, s_ref);
-ECR_f = ecr(F, s_ref);
+%% Plot the Energy Rates
+QER_h = quadEnergyRate(H, s_ref);
+QER_f = quadEnergyRate(F, s_ref);
+LER = linEnergyRate(A, s_ref);
+CER = controlEnergyRate(B, s_ref, u_ref);
 
-figure(5);
-plot(linspace(0.0,T_end,K+1), ECR_h, DisplayName="H", LineWidth=4, Color="b")
-hold on; grid on; grid minor; box on;
-plot(linspace(0.0,T_end,K+1), ECR_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
-hold off; legend(Location="best");
+fig5 = figure(5);
+fig5.Position = [500 500 1500 480];
+t = tiledlayout(1,3,"TileSpacing","compact","Padding","compact");
+nexttile;
+    plot(tspan, QER_h, DisplayName="H", LineWidth=4, Color="b")
+    hold on; grid on; grid minor; box on;
+    plot(tspan, QER_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+    hold off; legend(Location="best");
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Quadratic Energy Rate")
+nexttile;
+    plot(tspan, LER, Color="r", LineStyle=":", LineWidth=2, DisplayName="A")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Linear Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
+nexttile;
+    plot(tspan, CER, Color="k", LineStyle="-.", LineWidth=2, DisplayName="B")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Control Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
+
+figure(6);
+TER = QER_h+LER+CER;
+semilogy(tspan, TER, Color="b", LineWidth=2)
 xlabel("t, time")
-ylabel("Energy")
-title("Energy Constraint Residual over time of Burgers' Equation")
+ylabel("Energy Rate")
+title("Total Energy Rate")
+grid on; grid minor; box on;
+
 
 %% collect data for a series of trajectories with random inputs
 num_inputs = 10;
-U_rand = rand(K,num_inputs);
+if type == 1
+    U_rand = rand(K,num_inputs);
+else
+    U_rand = 0.2*rand(K,num_inputs)-0.1;
+end
 x_all = cell(num_inputs,1);
 xdot_all = cell(num_inputs,1);
 for i = 1:num_inputs
@@ -110,127 +141,156 @@ U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
+%% Operator inference parameters
+params.modelform = 'LQI';           % model is linear-quadratic with input term
+params.modeltime = 'continuous';    % learn time-continuous model
+params.dt        = dt;              % timestep to compute state time deriv
+params.ddt_order = '1ex';           % explicit 1st order timestep scheme
+
 %% for different basis sizes r, compute basis, learn model, and calculate state error 
-r_vals = 1:25;
+r_vals = 1:20;
+err_inf = zeros(length(r_vals),1);  % relative state error for inferred model
 err_int = zeros(length(r_vals),1);  % for intrusive model
-s_int_all = cell(length(r_vals));
-s_tmp_all = cell(length(r_vals));
 
 % intrusive
-Vr = U_svd(:,1:max(r_vals));
+rmax = max(r_vals);
+Vr = U_svd(:,1:rmax);
 Aint = Vr' * A * Vr;
 Bint = Vr' * B;
 Ln = elimat(N); Dr = dupmat(max(r_vals));
 Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
+Hint = F2Hs(Fint);
 
-for j = 1:length(r_vals)
+% op-inf (with stability check)
+while true
+    [operators] = inferOperators(X, U, Vr, params, R);
+    Ahat = operators.A;
+    Fhat = operators.F;
+    Bhat = operators.B;
+    
+    % Check if the inferred operator is stable 
+    lambda = eig(Ahat);
+    Re_lambda = real(lambda);
+    if all(Re_lambda(:) < 0)
+        break;
+    else
+        warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
+        rmax = rmax - 1;
+        Vr = U_svd(:,1:rmax);
+    end
+end
+
+for j = 1:rmax
     r = r_vals(j);
     Vr = U_svd(:,1:r);
+
+    Fhat_extract = extractF(Fhat, r);
+    s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+    s_rec = Vr*s_hat;
+    err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
     
     Fint_extract = extractF(Fint, r);
     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
     s_tmp = Vr*s_int;
     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
-    s_int_all(i) = s_int;
-    s_tmp_all(i) = s_tmp;
 end
 
-%% semi-implicit Euler scheme for integrating learned model from zero initial condition
-function s_hat = semiImplicitEuler(Ahat, Fhat, Bhat, dt, u_input, IC)
-    K = size(u_input,1);
-    r = size(Ahat,1);
-    s_hat = zeros(r,K+1); % initial state is zeros everywhere
-    
-    s_hat(:,1) = IC;
+%% Plotting
+figure(7); clf
+semilogy(r_vals(1:rmax),err_inf(1:rmax), DisplayName="opinf"); grid on; grid minor; hold on;
+semilogy(r_vals(1:rmax),err_int(1:rmax), DisplayName="int"); 
+hold off; legend(Location="southwest");
+xlabel('Model size $r$','Interpreter','LaTeX')
+ylabel('Relative state reconstruction error','Interpreter','LaTeX')
+title("Burgers inferred model error, $\mu$ = "+num2str(mu),'Interpreter','LaTeX')
 
-    ImdtA = eye(r) - dt*Ahat;
-    for i = 1:K
-        ssq = get_x_sq(s_hat(:,i)')';
-        s_hat(:,i+1) = ImdtA\(s_hat(:,i) + dt*Fhat*ssq + dt*Bhat*u_input(i));
-        if any(isnan(s_hat(:,i+1)))
-            warning(['ROM unstable at ',num2str(i),'th timestep'])
-            break
-        end
-    end
-end
+%% Check the Constraint Residual for intrusive (H)
+CR_h = constraintResidual_H(operators.H);
 
-%% builds matrices for Burgers full-order model
-function [A, B, F] = getBurgersMatrices(N,dx,dt,mu)
-    % construct linear operator resulting from second derivative
-    A = mu*gallery('tridiag',N,1,-2,1)/(dx^2);
-    A(1,1:2) = [-1/dt 0]; A(N,N-1:N) = [0 -1/dt]; % Dirichlet boundary conditions
+%% Check the Constraint Residual for intrusive (F)
+CR_f = constraintResidual_F(operators.F);
 
-    % construct quadratic operator F using central difference for the
-    % derivative
-    ii = reshape(repmat(2:N-1,2,1),2*N-4,1);
-    m = 2:N-1;
-    mi = N*(N+1)/2 - (N-m).*(N-m+1)/2 - (N-m);              % this is where the xi^2 term is
-    mm = N*(N+1)/2 - (N-m).*(N-m+1)/2 - (N-m) - (N-(m-2));  % this is where the x_{i-1}^2 term is
-    jp = mi + 1;        % this is the index of the x_{i+1}*x_i term
-    jm = mm + 1;        % this is the index of the x_{i-1}*x_i term
-    jj = reshape([jp; jm],2*N-4,1);
-    vv = reshape([ones(1,N-2); -ones(1,N-2)],2*N-4,1)/(2*dx);
-    F = -sparse(ii,jj,vv,N,N*(N+1)/2);
+%% Plot the Energy Rates
+QER_h = quadEnergyRate(operators.H, U_svd(:,1:rmax)' * s_ref);
+QER_f = quadEnergyRate(operators.F, U_svd(:,1:rmax)' * s_ref);
+LER = linEnergyRate(operators.A, U_svd(:,1:rmax)' * s_ref);
+CER = controlEnergyRate(operators.B, U_svd(:,1:rmax)' * s_ref, u_ref);
 
-    % construct input matrix B
-    B = [1; zeros(N-2,1); -1]/dt;
-end
+fig8 = figure(8);
+fig8.Position = [500 500 1500 480];
+t = tiledlayout(1,3,"TileSpacing","compact","Padding","compact");
+nexttile;
+    plot(tspan, QER_h, DisplayName="H", LineWidth=4, Color="b")
+    hold on; grid on; grid minor; box on;
+    plot(tspan, QER_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+    hold off; legend(Location="best");
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Quadratic Energy Rate")
+nexttile;
+    plot(tspan, LER, Color="r", LineStyle=":", LineWidth=2, DisplayName="A")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Linear Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
+nexttile;
+    plot(tspan, CER, Color="k", LineStyle="-.", LineWidth=2, DisplayName="B")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Control Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
 
-%% Other Functions
-function del = delta(i,j)
-    if i == j
-        del = 1.0;
-    else
-        del = 2.0;
-    end
-end
+figure(9);
+TER = QER_h+LER+CER;
+semilogy(tspan, TER, Color="b", LineWidth=2)
+xlabel("t, time")
+ylabel("Energy Rate")
+title("Total Energy Rate")
+grid on; grid minor; box on;
 
-function idx = fidx(n,j,k)
-    if j >= k
-        idx = (n - k/2)*(k - 1) + j;
-    else
-        idx = (n - j/2)*(j - 1) + k;
-    end
-end
 
-function CR = crf(F)
-    N = size(F,1);
-    CR = 0;
-    for i = 1:N
-        for j = 1:N
-            for k = 1:N
-                CR = (CR + delta(j,k)*F(i,fidx(N,j,k)) ...
-                    + delta(i,k)*F(j,fidx(N,i,k)) + delta(j,i)*F(k,fidx(N,j,i)));
-            end
-        end
-    end
-end
+%% Check the Constraint Residual for intrusive (H)
+CR_h = constraintResidual_H(Hint);
 
-function CR = crh(H)
-    N = size(H,1);
-    CR = 0;
-    for i = 1:N
-        for j = 1:N
-            for k = 1:N
-                CR = CR + H(i,N*(k-1)+j) + H(j,N*(k-1)+i) + H(k,N*(i-1)+j);
-            end
-        end
-    end
-end
+%% Check the Constraint Residual for intrusive (F)
+CR_f = constraintResidual_F(Fint);
 
-function ECR = ecr(A,X)
-    [n, K] = size(X);
-    s = size(A,2);
-    if s == n*(n+1)/2
-        f = @(x) x' * A * get_x_sq(x')';
-    elseif s == n^2
-        f = @(x) x' * A * kron(x,x);
-    else
-        error("Unappropriate dimension for input matrix.");
-    end
+%% Plot the Energy Rates
+rmax = max(r_vals);
+QER_h = quadEnergyRate(Hint, U_svd(:,1:rmax)' * s_ref);
+QER_f = quadEnergyRate(Fint, U_svd(:,1:rmax)' * s_ref);
+LER = linEnergyRate(Aint, U_svd(:,1:rmax)' * s_ref);
+CER = controlEnergyRate(Bint, U_svd(:,1:rmax)' * s_ref, u_ref);
 
-    ECR = zeros(K,1);
-    for i = 1:K
-        ECR(i) = f(X(:,i));
-    end
-end
+fig10 = figure(10);
+fig10.Position = [500 500 1500 480];
+t = tiledlayout(1,3,"TileSpacing","compact","Padding","compact");
+nexttile;
+    plot(tspan, QER_h, DisplayName="H", LineWidth=4, Color="b")
+    hold on; grid on; grid minor; box on;
+    plot(tspan, QER_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+    hold off; legend(Location="best");
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Quadratic Energy Rate")
+nexttile;
+    plot(tspan, LER, Color="r", LineStyle=":", LineWidth=2, DisplayName="A")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Linear Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
+nexttile;
+    plot(tspan, CER, Color="k", LineStyle="-.", LineWidth=2, DisplayName="B")
+    xlabel("t, time")
+    ylabel("Energy Rate")
+    title("Control Energy Rate")
+    grid on; grid minor; box on; legend(Location="best")
+
+figure(11);
+TER = QER_h+LER+CER;
+semilogy(tspan, TER, Color="b", LineWidth=2)
+xlabel("t, time")
+ylabel("Energy Rate")
+title("Total Energy Rate")
+grid on; grid minor; box on;
+
