@@ -21,9 +21,9 @@ elseif type == 2
     IC = -exp(linspace(0,1,N) - 1)' .* sin(pi * linspace(0,1,N) - pi)';
 else
     u_ref = zeros(K,1);
-    IC = exp(-10*(2*linspace(0,1,N) - 1).^2)';
-    fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^4);
-    ic_a = linspace(3,7.5,10);
+    IC = exp(-10*(3*linspace(0,1,N) - 1).^2)';
+    fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
+    ic_a = linspace(2.2,4.0,10);
 end
 
 [A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
@@ -166,15 +166,17 @@ params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 r_vals = 1:20;
 err_inf = zeros(length(r_vals),1);  % relative state error for inferred model
 err_int = zeros(length(r_vals),1);  % for intrusive model
+%% 
 
 % intrusive
 rmax = max(r_vals);
-Vr = U_svd(:,1:rmax);
+Vr = U_svd(:,1:50);
 Aint = Vr' * A * Vr;
 Bint = Vr' * B;
-Ln = elimat(N); Dr = dupmat(max(r_vals));
+Ln = elimat(N); Dr = dupmat(50);
 Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
 Hint = F2Hs(Fint);
+%% 
 
 % op-inf (with stability check)
 while true
@@ -212,8 +214,9 @@ end
 
 %% Plotting
 figure(7); clf
-semilogy(r_vals(1:rmax),err_inf(1:rmax), DisplayName="opinf"); grid on; grid minor; hold on;
-semilogy(r_vals(1:rmax),err_int(1:rmax), DisplayName="int"); 
+semilogy(r_vals(1:rmax),err_inf(1:rmax), DisplayName="opinf", Marker="o", MarkerSize=8); 
+grid on; grid minor; hold on;
+semilogy(r_vals(1:rmax),err_int(1:rmax), DisplayName="int", Marker="x", MarkerSize=5); 
 hold off; legend(Location="southwest");
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')

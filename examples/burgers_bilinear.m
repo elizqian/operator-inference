@@ -30,7 +30,7 @@ sspan = linspace(0,1.0,n);        % spatial span
 
 mu = 0.3;               % diffusion coefficient
 
-type = 1;
+type = 2;
 % run FOM with input 1s to get reference trajectory
 if type == 1
     u_ref = ones(K,1);

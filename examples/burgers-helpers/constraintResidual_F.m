@@ -2,10 +2,10 @@ function CR = constraintResidual_F(F)
     N = size(F,1);
     CR = 0;
     for i = 1:N
-        for j = 1:i
-            for k = 1:j
-                CR = (CR + delta(j,k)*F(i,fidx(N,j,k)) ...
-                    + delta(i,k)*F(j,fidx(N,i,k)) + delta(j,i)*F(k,fidx(N,j,i)));
+        for j = 1:N
+            for k = 1:N
+                CR = (CR + abs(delta(j,k)*F(i,fidx(N,j,k)) ...
+                    + delta(i,k)*F(j,fidx(N,i,k)) + delta(j,i)*F(k,fidx(N,j,i))));
             end
         end
     end
