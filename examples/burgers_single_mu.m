@@ -24,17 +24,23 @@ dt      = 1e-4;         % timestep
 T_end   = 1;            % final time
 K       = T_end/dt;     % num time steps
 
-mu = 0.9;               % diffusion coefficient
+mu = 0.5;               % diffusion coefficient
 
-type = 2;
-% FOM with 2 types of inputs and BCs
+type = 3;
+% run FOM with input 1s to get reference trajectory
 if type == 1
     u_ref = ones(K,1);
     IC = zeros(N,1);
+elseif type == 2
+    u_ref = zeros(K,1);
+    IC = -exp(linspace(0,1,N) - 1)' .* sin(pi * linspace(0,1,N) - pi)';
 else
     u_ref = zeros(K,1);
-    IC = sin(pi * linspace(0,1,N))';
+    IC = exp(-10*(2*linspace(0,1,N) - 1).^2)';
+    fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
+    ic_a = linspace(3,7.5,10);
 end
+
 [A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
 H = F2Hs(F);
 s_ref = semiImplicitEuler(A, F, B, dt, u_ref, IC);
@@ -62,13 +68,23 @@ num_inputs = 10;
 
 if type == 1
     U_rand = rand(K,num_inputs);
+elseif type == 2
+    U_rand = 0.2*rand(K,num_inputs/2)-0.1;
+    U_rand = [U_rand, zeros(K,num_inputs/2)];
 else
-    U_rand = 0.2*rand(K,num_inputs)-0.1;
+    U_rand = rand(K,num_inputs)-0.5;
 end
+
 x_all = cell(num_inputs,1);
 xdot_all = cell(num_inputs,1);
 for i = 1:num_inputs
-    s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC);
+    if type == 1 || type == 2
+        s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC);
+    else
+        IC_ = fic(ic_a(i));
+        s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC_);
+    end
+
     x_all{i}    = s_rand(:,2:end);
     xdot_all{i} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
 end
@@ -98,7 +114,7 @@ while true
     Ahat = operators.A;
     Fhat = operators.F;
     Bhat = operators.B;
-    
+
     % Check if the inferred operator is stable 
     lambda = eig(Ahat);
     Re_lambda = real(lambda);

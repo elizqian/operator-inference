@@ -24,8 +24,6 @@ dt      = 1e-4;         % timestep
 T_end   = 1;            % final time
 K       = T_end/dt;     % num time steps
 
-mus = 0.1:0.1:1.0; % diffusion coefficient
-M = length(mus);
 
 % Operator inference parameters
 params.modelform = 'LQI';           % model is linear-quadratic with input term
@@ -33,17 +31,23 @@ params.modeltime = 'continuous';    % learn time-continuous model
 params.dt        = dt;              % timestep to compute state time deriv
 params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 
-type = 1;
+type = 2;
 % FOM with 2 types of inputs and BCs
 if type == 1
+    mus = 0.1:0.1:1.0; % diffusion coefficient
     u_ref = ones(K,1);
     IC = zeros(N,1);
 else
+    % mus = 0.05:0.05:0.5; % diffusion coefficient
+    mus = 0.1:0.1:1.0; % diffusion coefficient
     u_ref = zeros(K,1);
-    IC = sin(pi * linspace(0,1,N))';
+    IC = exp(-10*(5*linspace(0,1,N) - 1).^2)';
+    fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
+    ic_a = linspace(3,7.5,10);
 end
 
 % Settings
+M = length(mus);
 r_vals = 1:20;
 err_inf = zeros(length(mus),length(r_vals));
 err_int = zeros(length(mus),length(r_vals));
@@ -65,11 +69,21 @@ for i = 1:M
 
     %% collect data for a series of trajectories with random inputs
     num_inputs = 10;
-    U_rand = rand(K,num_inputs);
+    if type == 1
+        U_rand = rand(K,num_inputs);
+    elseif type == 2
+        U_rand = rand(K,num_inputs)-0.5;
+    end
+
     x_all = cell(num_inputs,1);
     xdot_all = cell(num_inputs,1);
     for k = 1:num_inputs
-        s_rand = semiImplicitEuler(A,F,B,dt,U_rand(:,k),IC);
+        if type == 1
+            s_rand = semiImplicitEuler(A,F,B,dt,U_rand(:,k),IC);
+        else
+            IC_ = fic(ic_a(k));
+            s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,k), IC_); 
+        end
         x_all{k}    = s_rand(:,2:end);
         xdot_all{k} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
     end
@@ -133,8 +147,8 @@ for i = 1:M
 end
 
 %% Plot relative state error
-err_inf_avg = mean(err_inf(:,1:rmin));
-err_int_avg = mean(err_int(:,1:rmin));
+err_inf_avg = mean(err_inf(:,1:rmin),"omitnan");
+err_int_avg = mean(err_int(:,1:rmin),"omitnan");
 
 figure(1); clf;
 semilogy(r_vals(1:rmin),err_inf_avg, DisplayName="opinf"); grid on; grid minor; hold on;

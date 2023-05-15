@@ -9,16 +9,21 @@ K       = T_end/dt;               % num time steps
 tspan = linspace(0.0,T_end,K+1);  % time span
 sspan = linspace(0,1.0,N);        % spatial span
 
-mu = 0.3;               % diffusion coefficient
+mu = 0.1;               % diffusion coefficient
 
-type = 2;
+type = 3;
 % run FOM with input 1s to get reference trajectory
 if type == 1
     u_ref = ones(K,1);
     IC = zeros(N,1);
+elseif type == 2
+    u_ref = zeros(K,1);
+    IC = -exp(linspace(0,1,N) - 1)' .* sin(pi * linspace(0,1,N) - pi)';
 else
     u_ref = zeros(K,1);
-    IC = sin(pi * linspace(0,1,N))';
+    IC = exp(-10*(2*linspace(0,1,N) - 1).^2)';
+    fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^4);
+    ic_a = linspace(3,7.5,10);
 end
 
 [A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
@@ -124,13 +129,23 @@ grid on; grid minor; box on;
 num_inputs = 10;
 if type == 1
     U_rand = rand(K,num_inputs);
+elseif type == 2
+    U_rand = 0.2*rand(K,num_inputs/2)-0.1;
+    U_rand = [U_rand, zeros(K,num_inputs/2)];
 else
-    U_rand = 0.2*rand(K,num_inputs)-0.1;
+    U_rand = rand(K,num_inputs)-0.5;
 end
+
 x_all = cell(num_inputs,1);
 xdot_all = cell(num_inputs,1);
 for i = 1:num_inputs
-    s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC);
+    if type == 1 || type == 2
+        s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC);
+    else
+        IC_ = fic(ic_a(i));
+        s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC_);
+    end
+
     x_all{i}    = s_rand(:,2:end);
     xdot_all{i} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
 end
@@ -204,10 +219,10 @@ xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title("Burgers inferred model error, $\mu$ = "+num2str(mu),'Interpreter','LaTeX')
 
-%% Check the Constraint Residual for intrusive (H)
+%% Check the Constraint Residual for inferred (H)
 CR_h = constraintResidual_H(operators.H);
 
-%% Check the Constraint Residual for intrusive (F)
+%% Check the Constraint Residual for inferred (F)
 CR_f = constraintResidual_F(operators.F);
 
 %% Plot the Energy Rates
