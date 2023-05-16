@@ -7,7 +7,7 @@ function [CR,mmt] = constraintResidual_F(F)
             for k = 1:N
                 foo = delta(j,k)*F(i,fidx(N,j,k)) ...
                     + delta(i,k)*F(j,fidx(N,i,k)) + delta(j,i)*F(k,fidx(N,j,i));
-                CR = (CR + abs(foo));
+                CR = CR + abs(foo);
                 mmt = mmt + foo;
             end
         end

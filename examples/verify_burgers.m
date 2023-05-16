@@ -9,9 +9,9 @@ K       = T_end/dt;               % num time steps
 tspan = linspace(0.0,T_end,K+1);  % time span
 sspan = linspace(0,1.0,N);        % spatial span
 
-mu = 0.1;               % diffusion coefficient
+mu = 0.3;               % diffusion coefficient
 
-type = 3;
+type = 4;
 % run FOM with input 1s to get reference trajectory
 if type == 1
     u_ref = ones(K,1);
@@ -19,18 +19,39 @@ if type == 1
 elseif type == 2
     u_ref = zeros(K,1);
     IC = -exp(linspace(0,1,N) - 1)' .* sin(pi * linspace(0,1,N) - pi)';
-else
+elseif type == 3
     u_ref = zeros(K,1);
     IC = exp(-10*(3*linspace(0,1,N) - 1).^2)';
     fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
     ic_a = linspace(2.2,4.0,10);
+
+    [A, B, F] = getEPburgers_Matrices(N,1/(N-1),dt,mu);
+    s_ref = semiImplicitEuler(A, F, B, dt, u_ref, IC);
+elseif type == 4
+%     IC = (sin(pi*linspace(0,1,N)/2 - pi/2).^2)';
+%     IC = (pi/2*sin(2*pi*linspace(0,1,N)).^2 .* cos(pi*linspace(0,1,N)).^2)';
+%     fic = @(a,b) sin(a*pi*linspace(0,1,N)/2 - pi/2*b).^2;
+%     fic = @(a,b) a*pi/2*sin(b*2*pi*linspace(0,1,N)).^2 .* cos(pi*linspace(0,1,N)).^2;
+%     ic_a = linspace(0.8,1.2,4);
+%     ic_b = linspace(0.6,1.4,5);
+%     [ic_a, ic_b] = meshgrid(linspace(0.8,1.2,5), linspace(0.7,1.3,5));
+    
+    IC = (sin(2*pi*linspace(0,1,N)))';
+%     fic = @(a,b) a * sin(2*pi * linspace(0,1,N)) + b;
+%     [ic_a, ic_b] = meshgrid([0.9 0.95 1.05 1.1], [-0.05 0.0 0.05]);
+
+    fic = @(a) a * sin(2*pi * linspace(0,1,N));
+    ic_a = linspace(0.8,1.2,10);
+
+    [A, F] = getEPburgers_Matrices(N,1/(N-1),mu);
+    s_ref = semiImplicitEuler_noctrl(A, F, dt, K, IC);
 end
 
 % [A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
-[A, B, F] = getEPburgers_Matrices(N,1/(N-1),dt,mu);
+% [A, B, F] = getEPburgers_Matrices(N,1/(N-1),dt,mu);
 % [A, B, F] = getCFburgers_Matrices(N,1/(N-1),dt,mu);
+
 H = F2Hs(F);
-s_ref = semiImplicitEuler(A, F, B, dt, u_ref, IC);
 
 %% Surface Plot for verification
 figure(1);
@@ -111,7 +132,7 @@ viol
 QER_h = quadEnergyRate(H, s_ref);
 QER_f = quadEnergyRate(F, s_ref);
 LER = linEnergyRate(A, s_ref);
-CER = controlEnergyRate(B, s_ref, u_ref);
+% CER = controlEnergyRate(B, s_ref, u_ref);
 
 fig5 = figure(5);
 fig5.Position = [500 500 1500 480];
@@ -137,13 +158,13 @@ nexttile;
     title("Control Energy Rate")
     grid on; grid minor; box on; legend(Location="best")
 
-figure(6);
-TER = QER_h+LER+CER;
-semilogy(tspan, TER, Color="b", LineWidth=2)
-xlabel("t, time")
-ylabel("Energy Rate")
-title("Total Energy Rate")
-grid on; grid minor; box on;
+% figure(6);
+% TER = QER_h+LER+CER;
+% semilogy(tspan, TER, Color="b", LineWidth=2)
+% xlabel("t, time")
+% ylabel("Energy Rate")
+% title("Total Energy Rate")
+% grid on; grid minor; box on;
 
 %%
 figure(199);
@@ -164,8 +185,10 @@ if type == 1
 elseif type == 2
     U_rand = 0.2*rand(K,num_inputs/2)-0.1;
     U_rand = [U_rand, zeros(K,num_inputs/2)];
-else
+elseif type == 3
     U_rand = rand(K,num_inputs)-0.5;
+elseif type == 4
+    % no control
 end
 
 x_all = cell(num_inputs,1);
@@ -173,9 +196,12 @@ xdot_all = cell(num_inputs,1);
 for i = 1:num_inputs
     if type == 1 || type == 2
         s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC);
-    else
+    elseif type == 3
         IC_ = fic(ic_a(i));
         s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC_);
+    elseif type == 4
+        IC_ = fic(ic_a(i));
+        s_rand = semiImplicitEuler_noctrl(A, F, dt, K, IC_);
     end
 
     x_all{i}    = s_rand(:,2:end);
@@ -184,12 +210,12 @@ end
 
 X = cat(2,x_all{:});        % concatenate data from random trajectories
 R = cat(2,xdot_all{:});    
-U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
+% U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
 
 [U_svd,s_svd,~] = svd(X,'econ'); % take SVD for POD basis
 
 %% Operator inference parameters
-params.modelform = 'LQI';           % model is linear-quadratic with input term
+params.modelform = 'LQ';           % model is linear-quadratic with input term
 params.modeltime = 'continuous';    % learn time-continuous model
 params.dt        = dt;              % timestep to compute state time deriv
 params.ddt_order = '1ex';           % explicit 1st order timestep scheme
@@ -203,41 +229,47 @@ err_int = zeros(length(r_vals),1);  % for intrusive model
 rmax = max(r_vals);
 Vr = U_svd(:,1:rmax);
 Aint = Vr' * A * Vr;
-Bint = Vr' * B;
+% Bint = Vr' * B;
 Ln = elimat(N); Dr = dupmat(rmax);
 Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
 Hint = Vr' * H * kron(Vr,Vr);
 
+[operators] = inferOperators(X, NaN, Vr, params, R);
+Ahat = operators.A;
+Fhat = operators.F;
+
 % op-inf (with stability check)
-while true
-    [operators] = inferOperators(X, U, Vr, params, R);
-    Ahat = operators.A;
-    Fhat = operators.F;
-    Bhat = operators.B;
-    
-    % Check if the inferred operator is stable 
-    lambda = eig(Ahat);
-    Re_lambda = real(lambda);
-    if all(Re_lambda(:) < 0)
-        break;
-    else
-        warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
-        rmax = rmax - 1;
-        Vr = U_svd(:,1:rmax);
-    end
-end
+% while true
+%     [operators] = inferOperators(X, NaN, Vr, params, R);
+%     Ahat = operators.A;
+%     Fhat = operators.F;
+% %     Bhat = operators.B;
+%     
+%     % Check if the inferred operator is stable 
+%     lambda = eig(Ahat);
+%     Re_lambda = real(lambda);
+%     if all(Re_lambda(:) < 0)
+%         break;
+%     else
+%         warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
+%         rmax = rmax - 1;
+%         Vr = U_svd(:,1:rmax);
+%     end
+% end
 
 for j = 1:rmax
     r = r_vals(j);
     Vr = U_svd(:,1:r);
 
     Fhat_extract = extractF(Fhat, r);
-    s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+%     s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+    s_hat = semiImplicitEuler_noctrl(Ahat(1:r,1:r),Fhat_extract,dt,K,Vr'*IC);
     s_rec = Vr*s_hat;
     err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
     
     Fint_extract = extractF(Fint, r);
-    s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
+%     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
+    s_int = semiImplicitEuler_noctrl(Aint(1:r,1:r),Fint_extract,dt,K,Vr'*IC);
     s_tmp = Vr*s_int;
     err_int(j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
 end
@@ -262,7 +294,7 @@ title("Burgers inferred model error, $\mu$ = "+num2str(mu),'Interpreter','LaTeX'
 QER_h = quadEnergyRate(operators.H, U_svd(:,1:rmax)' * s_ref);
 QER_f = quadEnergyRate(operators.F, U_svd(:,1:rmax)' * s_ref);
 LER = linEnergyRate(operators.A, U_svd(:,1:rmax)' * s_ref);
-CER = controlEnergyRate(operators.B, U_svd(:,1:rmax)' * s_ref, u_ref);
+% CER = controlEnergyRate(operators.B, U_svd(:,1:rmax)' * s_ref, u_ref);
 
 fig8 = figure(8);
 fig8.Position = [500 500 1500 480];
@@ -282,19 +314,29 @@ nexttile;
     title("Linear Energy Rate")
     grid on; grid minor; box on; legend(Location="best")
 nexttile;
-    plot(tspan, CER, Color="k", LineStyle="-.", LineWidth=2, DisplayName="B")
-    xlabel("t, time")
-    ylabel("Energy Rate")
-    title("Control Energy Rate")
-    grid on; grid minor; box on; legend(Location="best")
+%     plot(tspan, CER, Color="k", LineStyle="-.", LineWidth=2, DisplayName="B")
+%     xlabel("t, time")
+%     ylabel("Energy Rate")
+%     title("Control Energy Rate")
+%     grid on; grid minor; box on; legend(Location="best")
 
-figure(9);
-TER = QER_h+LER+CER;
-semilogy(tspan, TER, Color="b", LineWidth=2)
+% figure(9);
+% TER = QER_h+LER+CER;
+% semilogy(tspan, TER, Color="b", LineWidth=2)
+% xlabel("t, time")
+% ylabel("Energy Rate")
+% title("Total Energy Rate")
+% grid on; grid minor; box on;
+
+%%
+figure(220);
+semilogy(tspan, QER_h, DisplayName="H", LineWidth=4, Color="b")
+hold on; grid on; grid minor; box on;
+plot(tspan, QER_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+hold off; legend(Location="best");
 xlabel("t, time")
 ylabel("Energy Rate")
-title("Total Energy Rate")
-grid on; grid minor; box on;
+title("Quadratic Energy Rate")
 
 
 %% Check the Constraint Residual for intrusive (H)
@@ -308,7 +350,7 @@ rmax = max(r_vals);
 QER_h = quadEnergyRate(Hint, U_svd(:,1:rmax)' * s_ref);
 QER_f = quadEnergyRate(Fint, U_svd(:,1:rmax)' * s_ref);
 LER = linEnergyRate(Aint, U_svd(:,1:rmax)' * s_ref);
-CER = controlEnergyRate(Bint, U_svd(:,1:rmax)' * s_ref, u_ref);
+% CER = controlEnergyRate(Bint, U_svd(:,1:rmax)' * s_ref, u_ref);
 
 fig10 = figure(10);
 fig10.Position = [500 500 1500 480];
