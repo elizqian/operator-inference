@@ -26,7 +26,9 @@ else
     ic_a = linspace(2.2,4.0,10);
 end
 
-[A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
+% [A, B, F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
+[A, B, F] = getEPburgers_Matrices(N,1/(N-1),dt,mu);
+% [A, B, F] = getCFburgers_Matrices(N,1/(N-1),dt,mu);
 H = F2Hs(F);
 s_ref = semiImplicitEuler(A, F, B, dt, u_ref, IC);
 
@@ -81,10 +83,29 @@ grid on; grid minor; box on;
 title("Energy over time of Burgers' Equation")
 
 %% Check the Constraint Residual (H)
-CR_h = constraintResidual_H(H);
+[CR.fom.H, mmt.fom.H] = constraintResidual_H(H);
 
 %% Check the Constraint Residual (F)
-CR_f = constraintResidual_F(F);
+[CR.fom.F, mmt.fom.F] = constraintResidual_F(F);
+
+%% Elizabeth's Sandbox
+get_h = @(i,j,k) H(i,(k-1)*N+j);
+derp = zeros(N,N,N);
+for i = 1:N
+    for j = 1:N
+        for k = 1:N
+            derp(i,j,k) = get_h(i,j,k) + get_h(j,i,k) + get_h(k,j,i);
+        end
+    end
+end
+
+% check inner product
+viol = 0;
+for i = 1:10
+    randtest = rand(N,1);
+    viol = viol + abs(randtest'*H*kron(randtest,randtest));
+end
+viol
 
 %% Plot the Energy Rates
 QER_h = quadEnergyRate(H, s_ref);
@@ -123,6 +144,17 @@ xlabel("t, time")
 ylabel("Energy Rate")
 title("Total Energy Rate")
 grid on; grid minor; box on;
+
+%%
+figure(199);
+plot(tspan, QER_h, DisplayName="H", LineWidth=4, Color="b")
+hold on; grid on; grid minor; box on;
+plot(tspan, QER_f, DisplayName="F", LineStyle="--", LineWidth=2, Color="g")
+hold off; legend(Location="best");
+ylim([-8e-15, 6e-15])
+xlabel("t, time")
+ylabel("Energy Rate")
+title("Quadratic Energy Rate")
 
 
 %% collect data for a series of trajectories with random inputs
@@ -166,17 +198,15 @@ params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 r_vals = 1:20;
 err_inf = zeros(length(r_vals),1);  % relative state error for inferred model
 err_int = zeros(length(r_vals),1);  % for intrusive model
-%% 
 
 % intrusive
 rmax = max(r_vals);
-Vr = U_svd(:,1:50);
+Vr = U_svd(:,1:rmax);
 Aint = Vr' * A * Vr;
 Bint = Vr' * B;
-Ln = elimat(N); Dr = dupmat(50);
+Ln = elimat(N); Dr = dupmat(rmax);
 Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
-Hint = F2Hs(Fint);
-%% 
+Hint = Vr' * H * kron(Vr,Vr);
 
 % op-inf (with stability check)
 while true
@@ -223,10 +253,10 @@ ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title("Burgers inferred model error, $\mu$ = "+num2str(mu),'Interpreter','LaTeX')
 
 %% Check the Constraint Residual for inferred (H)
-CR_h = constraintResidual_H(operators.H);
+[CR.inf.H, mmt.inf.H] = constraintResidual_H(operators.H);
 
 %% Check the Constraint Residual for inferred (F)
-CR_f = constraintResidual_F(operators.F);
+[CR.inf.F, mmt.inf.F] = constraintResidual_F(operators.F);
 
 %% Plot the Energy Rates
 QER_h = quadEnergyRate(operators.H, U_svd(:,1:rmax)' * s_ref);
@@ -268,10 +298,10 @@ grid on; grid minor; box on;
 
 
 %% Check the Constraint Residual for intrusive (H)
-CR_h = constraintResidual_H(Hint);
+[CR.int.H, mmt.int.H] = constraintResidual_H(Hint);
 
 %% Check the Constraint Residual for intrusive (F)
-CR_f = constraintResidual_F(Fint);
+[CR.int.F, mmt.int.F] = constraintResidual_F(Fint);
 
 %% Plot the Energy Rates
 rmax = max(r_vals);
