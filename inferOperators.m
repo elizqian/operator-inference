@@ -61,7 +61,6 @@ if ~isfield(params,'scale')
     params.scale = false;
 end
 
-m = size(U,2);
 
 % if no right-hand side for LS problem is provided, calculate the rhs from
 % state data based on specified model time
@@ -80,7 +79,7 @@ else
 end
 
 % get least-squares data matrix based on desired model form
-[D,l,c,s,mr] = getDataMatrix(X,Vr,U,ind,params.modelform);
+[D,l,c,s,mr,m] = getDataMatrix(X,Vr,U,ind,params.modelform);
 
 % scale data before LS solve if desired
 if params.scale
@@ -97,12 +96,12 @@ operators.A = temp(:,1:l);
 operators.F = temp(:,l+1:l+s);
 operators.H = F2H(operators.F);
 operators.N = temp(:,l+s+1:l+s+mr);
-% operators.B = temp(:,l+s+mr+1:l+s+mr+m);
-% operators.C = temp(:,l+s+mr+m+c);
+operators.B = temp(:,l+s+mr+1:l+s+mr+m);
+operators.C = temp(:,l+s+mr+m+c);
 end
 
 %% builds data matrix based on desired form of learned model
-function [D,l,c,s,mr] = getDataMatrix(X,Vr,U,ind,modelform)
+function [D,l,c,s,mr,m] = getDataMatrix(X,Vr,U,ind,modelform)
 K = length(ind);
 r = size(Vr,2);
 Xhat = Vr'*X(:,ind);
@@ -113,6 +112,7 @@ if contains(modelform,'I')
     U0 = U(ind,:);
 else
     U0 = [];
+    m = 0;
 end
 
 % if rhs contains quadratic H*kron(x,x) term

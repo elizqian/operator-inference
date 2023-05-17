@@ -26,24 +26,29 @@ K       = T_end/dt;     % num time steps
 
 
 % Operator inference parameters
-params.modelform = 'LQI';           % model is linear-quadratic with input term
+params.modelform = 'LQ';           % model is linear-quadratic with input term
 params.modeltime = 'continuous';    % learn time-continuous model
 params.dt        = dt;              % timestep to compute state time deriv
 params.ddt_order = '1ex';           % explicit 1st order timestep scheme
 
-type = 2;
+type = 3;
 % FOM with 2 types of inputs and BCs
 if type == 1
     mus = 0.1:0.1:1.0; % diffusion coefficient
     u_ref = ones(K,1);
     IC = zeros(N,1);
-else
+elseif type == 2
     % mus = 0.05:0.05:0.5; % diffusion coefficient
     mus = 0.1:0.1:1.0; % diffusion coefficient
     u_ref = zeros(K,1);
     IC = exp(-10*(5*linspace(0,1,N) - 1).^2)';
     fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
     ic_a = linspace(3,7.5,10);
+elseif type == 3
+    mus = 0.1:0.1:1.0; % diffusion coefficient
+    IC = (sin(2*pi*linspace(0,1,N)))';
+    fic = @(a) a * sin(2*pi * linspace(0,1,N));
+    ic_a = linspace(0.8,1.2,10);
 end
 
 % Settings
@@ -63,8 +68,14 @@ intop_all = cell(M,1);
 rmin = max(r_vals);
 for i = 1:M
     mu = mus(i);
-    [A,B,F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
-    s_ref = semiImplicitEuler(A,F,B,dt,u_ref,IC);
+    if type == 1 || type == 2
+        [A,B,F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
+        s_ref = semiImplicitEuler(A,F,B,dt,u_ref,IC);
+    else
+        [A,F] = getEPburgers_Matrices(N,1/(N-1),mu);
+        s_ref = semiImplicitEuler_noctrl(A,F,dt,K,IC);
+        B = 0;
+    end
     s_ref_all{i} = s_ref;
 
     %% collect data for a series of trajectories with random inputs
@@ -73,6 +84,8 @@ for i = 1:M
         U_rand = rand(K,num_inputs);
     elseif type == 2
         U_rand = rand(K,num_inputs)-0.5;
+    elseif type == 3
+        % no control input
     end
 
     x_all = cell(num_inputs,1);
@@ -80,17 +93,22 @@ for i = 1:M
     for k = 1:num_inputs
         if type == 1
             s_rand = semiImplicitEuler(A,F,B,dt,U_rand(:,k),IC);
-        else
+        elseif type == 2
             IC_ = fic(ic_a(k));
             s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,k), IC_); 
+        elseif type == 3
+            IC_ = fic(ic_a(k));
+            s_rand = semiImplicitEuler_noctrl(A, F, dt, K, IC_);
         end
         x_all{k}    = s_rand(:,2:end);
         xdot_all{k} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
     end
     
     X = cat(2,x_all{:});  % concatenate data from random trajectories
-    R = cat(2,xdot_all{:});    
-    U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
+    R = cat(2,xdot_all{:}); 
+    if type == 1 || type == 2
+        U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
+    end
     [U_svd,~,~] = svd(X,'econ');  % take SVD for POD basis
 
     % intrusive
@@ -98,30 +116,38 @@ for i = 1:M
     Vr = U_svd(:,1:rmax);
     Aint = Vr' * A * Vr;
     Bint = Vr' * B;
+
     Ln = elimat(N); Dr = dupmat(max(r_vals));
     Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
-    op_int.A = Aint; op_int.B = Bint; op_int.F = Fint;
+    op_int.A = Aint; 
+    op_int.B = Bint; 
+    op_int.F = Fint;
     intop_all{i} = op_int;
+
+    [operators] = inferOperators(X, 0, Vr, params, R);
+    Ahat = operators.A;
+    Fhat = operators.F;
+    Bhat = operators.B;
     
     % op-inf (with stability check)
-    while true
-        [operators] = inferOperators(X, U, Vr, params, R);
-        Ahat = operators.A;
-        Fhat = operators.F;
-        Bhat = operators.B;
-        
-        % Check if the inferred operator is stable 
-        lambda = eig(Ahat);
-        Re_lambda = real(lambda);
-        if all(Re_lambda(:) < 0)
-            infop_all{i} = operators;
-            break;
-        else
-            warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
-            rmax = rmax - 1;
-            Vr = U_svd(:,1:rmax);
-        end
-    end
+    % while true
+    %     [operators] = inferOperators(X, U, Vr, params, R);
+    %     Ahat = operators.A;
+    %     Fhat = operators.F;
+    %     Bhat = operators.B;
+    % 
+    %     % Check if the inferred operator is stable 
+    %     lambda = eig(Ahat);
+    %     Re_lambda = real(lambda);
+    %     if all(Re_lambda(:) < 0)
+    %         infop_all{i} = operators;
+    %         break;
+    %     else
+    %         warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
+    %         rmax = rmax - 1;
+    %         Vr = U_svd(:,1:rmax);
+    %     end
+    % end
 
     %% For different basis sizes r, compute basis, learn model, and calculate state error 
     for j = 1:rmax
@@ -130,20 +156,28 @@ for i = 1:M
         
         % Extract operators for inferred model
         Fhat_extract = extractF(Fhat, r);
-        s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+        if type == 1 || type == 2
+            s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+        else
+            s_hat = semiImplicitEuler_noctrl(Ahat(1:r,1:r),Fhat_extract,dt,K,Vr'*IC);
+        end
         s_rec = Vr*s_hat;
         err_inf(i,j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
         
         % Extract operators for intrusive model
         Fint_extract = extractF(Fint, r);
-        s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
+        if type == 1 || type == 2
+            s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
+        else
+            s_int = semiImplicitEuler_noctrl(Aint(1:r,1:r),Fint_extract,dt,K,Vr'*IC);
+        end
         s_tmp = Vr*s_int;
         err_int(i,j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
     end
 
-    if rmin > rmax
-        rmin = rmax;
-    end
+    % if rmin > rmax
+    %     rmin = rmax;
+    % end
 end
 
 %% Plot relative state error
@@ -151,8 +185,10 @@ err_inf_avg = mean(err_inf(:,1:rmin),"omitnan");
 err_int_avg = mean(err_int(:,1:rmin),"omitnan");
 
 figure(1); clf;
-semilogy(r_vals(1:rmin),err_inf_avg, DisplayName="opinf"); grid on; grid minor; hold on;
-semilogy(r_vals(1:rmin),err_int_avg, DisplayName="int"); hold off; legend(Location="southwest");
+semilogy(r_vals(1:rmin),err_inf_avg, DisplayName="opinf", Marker="o", MarkerSize=8); 
+grid on; grid minor; hold on;
+semilogy(r_vals(1:rmin),err_int_avg, DisplayName="int", Marker="x", MarkerSize=5); 
+hold off; legend(Location="southwest");
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title('Burgers inferred model error (Train)','Interpreter','LaTeX')
