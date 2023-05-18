@@ -9,7 +9,7 @@ K       = T_end/dt;               % num time steps
 tspan = linspace(0.0,T_end,K+1);  % time span
 sspan = linspace(0,1.0,N);        % spatial span
 
-mu = 0.3;               % diffusion coefficient
+mu = 0.1;               % diffusion coefficient
 
 type = 4;
 % run FOM with input 1s to get reference trajectory
@@ -40,7 +40,6 @@ elseif type == 4
 %     fic = @(a,b) a * sin(2*pi * linspace(0,1,N)) + b;
 %     [ic_a, ic_b] = meshgrid([0.9 0.95 1.05 1.1], [-0.05 0.0 0.05]);
 
-    fic = @(a) a * sin(2*pi * linspace(0,1,N));
     ic_a = linspace(0.8,1.2,10);
 
     [A, F] = getEPburgers_Matrices(N,1/(N-1),mu);
@@ -200,8 +199,7 @@ for i = 1:num_inputs
         IC_ = fic(ic_a(i));
         s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,i), IC_);
     elseif type == 4
-        IC_ = fic(ic_a(i));
-        s_rand = semiImplicitEuler_noctrl(A, F, dt, K, IC_);
+        s_rand = semiImplicitEuler_noctrl(A, F, dt, K, ic_a(i) * IC);
     end
 
     x_all{i}    = s_rand(:,2:end);

@@ -47,7 +47,6 @@ elseif type == 2
 elseif type == 3
     mus = 0.1:0.1:1.0; % diffusion coefficient
     IC = (sin(2*pi*linspace(0,1,N)))';
-    fic = @(a) a * sin(2*pi * linspace(0,1,N));
     ic_a = linspace(0.8,1.2,10);
 end
 
@@ -63,6 +62,9 @@ s_ref_all = cell(M,1);
 % Store all operators to use for test data
 infop_all = cell(M,1);
 intop_all = cell(M,1);
+
+%
+Usvd_all = cell(10,1);
 
 %% LEARN AND ANALYZE TRAINING DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 rmin = max(r_vals);
@@ -97,8 +99,7 @@ for i = 1:M
             IC_ = fic(ic_a(k));
             s_rand = semiImplicitEuler(A, F, B, dt, U_rand(:,k), IC_); 
         elseif type == 3
-            IC_ = fic(ic_a(k));
-            s_rand = semiImplicitEuler_noctrl(A, F, dt, K, IC_);
+            s_rand = semiImplicitEuler_noctrl(A, F, dt, K, ic_a(k)*IC);
         end
         x_all{k}    = s_rand(:,2:end);
         xdot_all{k} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
@@ -117,6 +118,8 @@ for i = 1:M
     Aint = Vr' * A * Vr;
     Bint = Vr' * B;
 
+    Usvd_all{i} = Vr;
+
     Ln = elimat(N); Dr = dupmat(max(r_vals));
     Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
     op_int.A = Aint; 
@@ -128,6 +131,7 @@ for i = 1:M
     Ahat = operators.A;
     Fhat = operators.F;
     Bhat = operators.B;
+    infop_all{i} = operators;
     
     % op-inf (with stability check)
     % while true
@@ -201,7 +205,7 @@ t.Padding = 'compact';
 
 for i = 1:M
     nexttile
-        s = surf(linspace(0.0,T_end,K+1),linspace(0.0,1.0,N),s_ref_all{i},'FaceAlpha',0.8,DisplayName="$\mu$="+mus(i));
+        s = surf(linspace(0.0,T_end,K),linspace(0.0,1.0,N),s_ref_all{i},'FaceAlpha',0.8,DisplayName="$\mu$="+mus(i));
         s.EdgeColor = 'none';
         xlabel("t");
         ylabel("x");

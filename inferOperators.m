@@ -81,17 +81,20 @@ end
 % get least-squares data matrix based on desired model form
 [D,l,c,s,mr,m] = getDataMatrix(X,Vr,U,ind,params.modelform);
 
-% scale data before LS solve if desired
-if params.scale
-    scl = max(abs(D),[],1);
-else
-    scl = ones(1,size(D,2));
-end
-Dscl = D./scl;
+% % scale data before LS solve if desired
+% if params.scale
+%     scl = max(abs(D),[],1);
+% else
+%     scl = ones(1,size(D,2));
+% end
+% Dscl = D./scl;
+% 
+% % Solve LS problem and pull operators from result
+% temp = tikhonov(rhs,Dscl,params.lambda)';
+% temp = temp./scl;  % un-scale solution
 
-% Solve LS problem and pull operators from result
-temp = tikhonov(rhs,Dscl,params.lambda)';
-temp = temp./scl;  % un-scale solution
+temp = (D \ rhs)';
+
 operators.A = temp(:,1:l);
 operators.F = temp(:,l+1:l+s);
 operators.H = F2H(operators.F);
