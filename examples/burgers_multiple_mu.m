@@ -45,14 +45,15 @@ elseif type == 2
     fic = @(a) exp(-10*(a*linspace(0,1,N) - 1).^2);
     ic_a = linspace(3,7.5,10);
 elseif type == 3
-    mus = 0.1:0.1:1.0; % diffusion coefficient
+    mus = linspace(0.05,0.15,10); % diffusion coefficient
     IC = (sin(2*pi*linspace(0,1,N)))';
-    ic_a = linspace(0.8,1.2,10);
+%     ic_a = linspace(0.50,1.1,5);
+    ic_a = 1.0;
 end
 
 % Settings
-M = length(mus);
-r_vals = 1:20;
+M = length(ic_a);
+r_vals = 1:15;
 err_inf = zeros(length(mus),length(r_vals));
 err_int = zeros(length(mus),length(r_vals));
 
@@ -66,9 +67,11 @@ intop_all = cell(M,1);
 %
 Usvd_all = cell(10,1);
 
+DS = 10;
+
 %% LEARN AND ANALYZE TRAINING DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 rmin = max(r_vals);
-for i = 1:M
+for i = 1:length(mus)
     mu = mus(i);
     if type == 1 || type == 2
         [A,B,F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
@@ -81,18 +84,18 @@ for i = 1:M
     s_ref_all{i} = s_ref;
 
     %% collect data for a series of trajectories with random inputs
-    num_inputs = 10;
+    num_ICs = length(ic_a);
     if type == 1
-        U_rand = rand(K,num_inputs);
+        U_rand = rand(K,num_ICs);
     elseif type == 2
-        U_rand = rand(K,num_inputs)-0.5;
+        U_rand = rand(K,num_ICs)-0.5;
     elseif type == 3
         % no control input
     end
 
-    x_all = cell(num_inputs,1);
-    xdot_all = cell(num_inputs,1);
-    for k = 1:num_inputs
+    x_all = cell(num_ICs,1);
+    xdot_all = cell(num_ICs,1);
+    for k = 1:num_ICs
         if type == 1
             s_rand = semiImplicitEuler(A,F,B,dt,U_rand(:,k),IC);
         elseif type == 2
@@ -101,36 +104,38 @@ for i = 1:M
         elseif type == 3
             s_rand = semiImplicitEuler_noctrl(A, F, dt, K, ic_a(k)*IC);
         end
-        x_all{k}    = s_rand(:,2:end);
-        xdot_all{k} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
+        foo = s_rand(:,2:end);
+        x_all{k}    = foo(:,1:DS:end);
+        bar = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
+        xdot_all{k} = bar(:,1:DS:end);
     end
     
     X = cat(2,x_all{:});  % concatenate data from random trajectories
     R = cat(2,xdot_all{:}); 
-    if type == 1 || type == 2
-        U = reshape(U_rand(:,1:num_inputs),K*num_inputs,1);
-    end
+%     if type == 1 || type == 2
+%         U = reshape(U_rand(:,1:num_ICs),K*num_ICs,1);
+%     end
     [U_svd,~,~] = svd(X,'econ');  % take SVD for POD basis
 
     % intrusive
     rmax = max(r_vals);
     Vr = U_svd(:,1:rmax);
     Aint = Vr' * A * Vr;
-    Bint = Vr' * B;
+%     Bint = Vr' * B;
 
     Usvd_all{i} = Vr;
 
     Ln = elimat(N); Dr = dupmat(max(r_vals));
     Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
     op_int.A = Aint; 
-    op_int.B = Bint; 
+%     op_int.B = Bint; 
     op_int.F = Fint;
     intop_all{i} = op_int;
 
     [operators] = inferOperators(X, 0, Vr, params, R);
     Ahat = operators.A;
     Fhat = operators.F;
-    Bhat = operators.B;
+%     Bhat = operators.B;
     infop_all{i} = operators;
     
     % op-inf (with stability check)

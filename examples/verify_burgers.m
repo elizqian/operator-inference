@@ -9,7 +9,7 @@ K       = T_end/dt;               % num time steps
 tspan = linspace(0.0,T_end,K+1);  % time span
 sspan = linspace(0,1.0,N);        % spatial span
 
-mu = 0.1;               % diffusion coefficient
+mu = 0.05;               % diffusion coefficient
 
 type = 4;
 % run FOM with input 1s to get reference trajectory
@@ -40,7 +40,8 @@ elseif type == 4
 %     fic = @(a,b) a * sin(2*pi * linspace(0,1,N)) + b;
 %     [ic_a, ic_b] = meshgrid([0.9 0.95 1.05 1.1], [-0.05 0.0 0.05]);
 
-    ic_a = linspace(0.8,1.2,10);
+%     ic_a = linspace(0.9,1.1,3);
+    ic_a = 1.0;
 
     [A, F] = getEPburgers_Matrices(N,1/(N-1),mu);
     s_ref = semiImplicitEuler_noctrl(A, F, dt, K, IC);
@@ -54,30 +55,31 @@ H = F2Hs(F);
 
 %% Surface Plot for verification
 figure(1);
-s = surf(linspace(0.0,T_end,K+1),linspace(0.0,1.0,N),s_ref,'FaceAlpha',0.8,DisplayName="\mu="+num2str(mu));
+s = surf(linspace(0.0,T_end,K),linspace(0.0,1.0,N),s_ref,'FaceAlpha',0.8,DisplayName="\mu="+num2str(mu));
 s.EdgeColor = 'none';
-xlabel("t, time");
-ylabel("\omega, space");
-zlabel("x(\omega,t), velocity")
+xlabel("t, time", FontSize=19);
+ylabel("\omega, space", FontSize=19);
+zlabel("x(\omega,t), velocity", FontSize=19)
 axis tight
 view(-73.25,38.649)
 grid on
-text(0.1,0.8,1,"\mu = "+num2str(mu),'FontSize',14);
+% text(0.1,0.8,1,"\mu = "+num2str(mu),'FontSize',14);
 
 %% Slice of surface plot (time)
-figure(2);
+fig = figure(Position=[20 20 800 700]);
 plot(0,0,MarkerSize=0.01,HandleVisibility="off")
 hold on; grid on; grid minor; box on;
-cmap = jet(length(1:floor(K/10):K+1));
+cmap = parula(length(1:floor(K/10):K+1));
 ct = 1;
-for i = 1:floor(K/10):K+1
-    plot(sspan,s_ref(:,i),Color=cmap(ct,:),DisplayName="$t="+num2str(i)+"$");
+for i = 1:floor(K/10):K
+    plot(sspan,s_ref(:,i),Color=cmap(ct,:),DisplayName="$t="+num2str(i/10000-0.0001)+"$");
     ct = ct + 1;
 end
-hold off; legend(Interpreter="latex");
-xlabel("\omega, space")
-ylabel("x, velocity")
-title("Burgers' plot sliced by time \mu="+num2str(mu))
+hold off; legend(Interpreter="latex", FontSize=16);
+xlabel("\omega, space", FontSize=20,FontName="Century",Interpreter="tex")
+ylabel("x, velocity", FontSize=20,FontName="Century",Interpreter="tex")
+% saveas(fig,"burgers_2d.pdf")
+% title("Burgers' plot sliced by time \mu="+num2str(mu))
 
 %% Slice of surface plot (space)
 figure(3);
@@ -178,7 +180,7 @@ title("Quadratic Energy Rate")
 
 
 %% collect data for a series of trajectories with random inputs
-num_inputs = 10;
+num_inputs = length(ic_a);
 if type == 1
     U_rand = rand(K,num_inputs);
 elseif type == 2
@@ -189,6 +191,8 @@ elseif type == 3
 elseif type == 4
     % no control
 end
+
+DS=1;
 
 x_all = cell(num_inputs,1);
 xdot_all = cell(num_inputs,1);
@@ -201,9 +205,11 @@ for i = 1:num_inputs
     elseif type == 4
         s_rand = semiImplicitEuler_noctrl(A, F, dt, K, ic_a(i) * IC);
     end
-
-    x_all{i}    = s_rand(:,2:end);
-    xdot_all{i} = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
+    
+    foo = s_rand(:,2:end);
+    x_all{i}    = foo(:,1:DS:end);
+    bar = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
+    xdot_all{i} = bar(:,1:DS:end);
 end
 
 X = cat(2,x_all{:});        % concatenate data from random trajectories
@@ -264,6 +270,10 @@ for j = 1:rmax
     s_hat = semiImplicitEuler_noctrl(Ahat(1:r,1:r),Fhat_extract,dt,K,Vr'*IC);
     s_rec = Vr*s_hat;
     err_inf(j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
+
+    if j == rmax
+        s_hold = s_rec;
+    end
     
     Fint_extract = extractF(Fint, r);
 %     s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
@@ -281,6 +291,39 @@ hold off; legend(Location="southwest");
 xlabel('Model size $r$','Interpreter','LaTeX')
 ylabel('Relative state reconstruction error','Interpreter','LaTeX')
 title("Burgers inferred model error, $\mu$ = "+num2str(mu),'Interpreter','LaTeX')
+
+%%
+s_hold = readmatrix("s_rec.csv");
+
+%% Surface Plot for verification
+figure(1);
+s = surf(linspace(0.0,T_end,K+1),linspace(0.0,1.0,N),s_hold,'FaceAlpha',0.8,DisplayName="\mu="+num2str(mu));
+s.EdgeColor = 'none';
+xlabel("t, time", FontSize=19);
+ylabel("\omega, space", FontSize=19);
+zlabel("x(\omega,t), velocity", FontSize=19)
+axis tight
+view(-73.25,38.649)
+grid on
+% text(0.1,0.8,1,"\mu = "+num2str(mu),'FontSize',14);
+
+%% Slice of surface plot (time)
+fig = figure(Position=[20 20 800 700]);
+plot(0,0,MarkerSize=0.01,HandleVisibility="off")
+hold on; grid on; grid minor; box on;
+cmap = parula(length(1:floor(K/10):K+1));
+ct = 1;
+for i = 1:floor(K/10):K
+    plot(sspan,s_hold(:,i),Color=cmap(ct,:),DisplayName="$t="+num2str(i/10000-0.0001)+"$");
+    ct = ct + 1;
+end
+hold off; legend(Interpreter="latex", FontSize=16);
+xlabel("\omega, space", FontSize=20,FontName="Century",Interpreter="tex")
+ylabel("x, velocity", FontSize=20,FontName="Century",Interpreter="tex")
+title("\mu=0.05, r=15", FontSize=20,FontName="Century")
+ylim([-1, 1])
+% saveas(fig,"burgers_2d.pdf")
+% title("Burgers' plot sliced by time \mu="+num2str(mu))
 
 %% Check the Constraint Residual for inferred (H)
 [CR.inf.H, mmt.inf.H] = constraintResidual_H(operators.H);

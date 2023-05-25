@@ -3,9 +3,9 @@ function [CR,mmt] = constraintResidual_H(H)
     CR = 0;
     mmt = 0;
     for i = 1:N
-        for j = 1:N
-            for k = 1:N
-                foo = H(i,N*(k-1)+j) + H(j,N*(k-1)+i) + H(k,N*(i-1)+j);
+        for j = 1:i
+            for k = 1:j
+                foo = H(i,N*(k-1)+j) + H(j,N*(k-1)+i) + H(k,N*(j-1)+i);
                 CR = CR + abs(foo);
                 mmt = mmt + foo;
             end

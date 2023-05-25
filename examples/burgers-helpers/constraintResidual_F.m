@@ -3,10 +3,10 @@ function [CR,mmt] = constraintResidual_F(F)
     CR = 0;
     mmt = 0;
     for i = 1:N
-        for j = 1:N
-            for k = 1:N
+        for j = 1:i
+            for k = 1:j
                 foo = delta(j,k)*F(i,fidx(N,j,k)) ...
-                    + delta(i,k)*F(j,fidx(N,i,k)) + delta(j,i)*F(k,fidx(N,j,i));
+                    + delta(i,k)*F(j,fidx(N,i,k)) + delta(i,j)*F(k,fidx(N,i,j));
                 CR = CR + abs(foo);
                 mmt = mmt + foo;
             end
@@ -23,9 +23,9 @@ function del = delta(i,j)
 end
 
 function idx = fidx(n,j,k)
-    if j >= k
-        idx = (n - k/2)*(k - 1) + j;
-    else
-        idx = (n - j/2)*(j - 1) + k;
-    end
+%     if j >= k
+    idx = (n - k/2)*(k - 1) + j;
+%     else
+%         idx = (n - j/2)*(j - 1) + k;
+%     end
 end
