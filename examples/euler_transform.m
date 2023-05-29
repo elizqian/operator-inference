@@ -20,7 +20,7 @@
 
 %% SETUP
 clear
-addpath('euler-helpers','../')
+addpath('euler-helpers','../src/')
 
 % FOM parameters
 N       = 200;

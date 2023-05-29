@@ -1,3 +1,15 @@
+% Elizabeth Qian (elizqian@mit.edu) 11 July 2019
+% -----------------------------------------------------------------------
+% Based on operator inference problem for 1D heat equation described in:
+%   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
+%   non-intrusive projection-based model reduction." Computer Methods in
+%   Applied Mechanics and Engineering, 306:196-215, 2016.
+%
+% See also:
+%   Qian, E., Kramer, B., Marques, A. and Willcox, K., "Transform & Learn:
+%   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
+%   2019 Forum, June 17-21, Dallas, TX.
+
 clear; close all
 
 rng(13)
@@ -35,8 +47,6 @@ ax.FontSize = 16;
 xlabel('$x$','interpreter','latex','fontsize',20)
 title('Gaussian RF initial states','interpreter','latex','fontsize',20)
 
-
-
 figure(2);
 plot(x,sqrt(2)*sin(l(1:5)*pi.*x),'MarkerSize',3)
 ax = gca;
@@ -44,8 +54,6 @@ ax.FontSize = 16;
 ylim([-2 2])
 xlabel('$x$','interpreter','latex','fontsize',20)
 title('Analytical principal components','interpreter','latex','fontsize',20)
-
-
 
 %% evolve for timestep data
 S = [];
@@ -181,7 +189,7 @@ title('Test error in Euclidean norm','interpreter','latex','fontsize',18)
 
 function out = mre(S,S_ref,W)
     if nargin == 2
-        out = mean( colnorm(S-S_ref)./colnorm(S_ref) );
+        out = mean(colnorm(S-S_ref)./colnorm(S_ref) );
     else
         out = mean(colnorm(S-S_ref,W)./colnorm(S_ref,W));
     end
