@@ -76,7 +76,7 @@ The `examples` folder contains scripts that set-up and run several examples:
 ## Requirements
 * MATLAB Signal Processing Toolbox
 * MATLAB Curve Fitting Toolbox
-* MATLAB 2018a or newer
+* MATLAB 2019a or newer
 
 ---
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@caltech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) also contributed to this code.
