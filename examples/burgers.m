@@ -1,4 +1,6 @@
 % Elizabeth Qian (elizqian@mit.edu) 11 July 2019
+% Tomoki Koike (tkoike3@gatech.edu) 12 May 2023 [EDITED]
+%
 % -----------------------------------------------------------------------
 % Based on operator inference problem for Burgers equation described in:
 %   Peherstorfer, B. and Willcox, K., "Data-driven operator inference for
@@ -13,8 +15,8 @@
 %   A data-driven approach to nonlinear model reduction." In AIAA Aviation 
 %   2019 Forum, June 17-21, Dallas, TX.
 
-clear
-addpath('../')
+clear; close all; clc;
+addpath('../src/',"burgers-helpers/");
 
 %% Problem set-up
 N       = 2^7+1;        % num grid points
@@ -22,71 +24,140 @@ dt      = 1e-4;         % timestep
 T_end   = 1;            % final time
 K       = T_end/dt;     % num time steps
 
-mu = 0.1;               % diffusion coefficient
-
-% run FOM with input 1s to get reference trajectory
+mus = 0.1:0.1:1.0; % diffusion coefficient
 u_ref = ones(K,1);
-[s_ref,A,B,F] = burgersFOM(N,dt,T_end,mu,u_ref);
-H = F2H(F);
+IC = zeros(N,1);
+Mp = 10;  % number of random inputs
 
-%%
-% check index-wise constraint
-get_h = @(i,j,k) H(i,(k-1)*N+j);
-derp = zeros(N,N,N);
-derpsum = 0;
-for i = 1:N
-    for j = 1:N
-        for k = 1:N
-            foo = get_h(i,j,k) + get_h(j,i,k) + get_h(k,j,i);
-            derp(i,j,k) = get_h(i,j,k) + get_h(j,i,k) + get_h(k,j,i);
-            derpsum = derpsum + abs(foo);
+% POD basis size and operators
+r_vals = 1:16;
+err_inf = zeros(length(mus),length(r_vals));
+err_int = zeros(length(mus),length(r_vals));
+
+% Store values
+s_ref_all = cell(Mp,1);
+infop_all = cell(Mp,1);
+intop_all = cell(Mp,1);
+Usvd_all = cell(10,1);
+
+% Down-sampling
+DS = 1;
+
+%% Operator inference parameters
+params.modelform = 'LQI';           % model is linear-quadratic with input term
+params.modeltime = 'continuous';    % learn time-continuous model
+params.dt        = dt;              % timestep to compute state time deriv
+params.ddt_order = '1ex';           % explicit 1st order timestep scheme
+
+%% LEARN AND ANALYZE TRAINING DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+rmin = max(r_vals);
+for i = 1:length(mus)
+    mu = mus(i);
+    [A,B,F] = getBurgers_ABF_Matrices(N,1/(N-1),dt,mu);
+    s_ref = semiImplicitEuler(A,F,B,dt,u_ref,IC);
+    s_ref_all{i} = s_ref;
+
+    %% collect data for a series of trajectories with random inputs
+    U_rand = rand(K,Mp);
+    x_all = cell(Mp,1);
+    xdot_all = cell(Mp,1);
+    for k = 1:Mp
+        s_rand = semiImplicitEuler(A,F,B,dt,U_rand(:,k),IC);
+        foo = s_rand(:,2:end);
+        x_all{k} = foo(:,1:DS:end);  % down-sample and store
+        bar = (s_rand(:,2:end)-s_rand(:,1:end-1))/dt;
+        xdot_all{k} = bar(:,1:DS:end);  % down-sample and store
+    end
+    
+    X = cat(2,x_all{:});  % concatenate data from random trajectories
+    R = cat(2,xdot_all{:}); 
+    U = U_rand(1:DS:end,:);  % down-sample
+    U = U(:);  % vectorize
+    [U_svd,~,~] = svd(X,'econ');  % take SVD for POD basis
+
+    % Intrusive operators
+    rmax = max(r_vals);
+    Vr = U_svd(:,1:rmax);
+    Aint = Vr' * A * Vr;
+    Bint = Vr' * B;
+    Ln = elimat(N);  % elimination matrix of dim = N
+    Dr = dupmat(max(r_vals));  % duplication matrix of dim = rmax
+    Fint = Vr' * F * Ln * kron(Vr,Vr) * Dr;
+    op_int.A = Aint; 
+    op_int.B = Bint; 
+    op_int.F = Fint;
+    intop_all{i} = op_int;  % store the intrusive operator
+    Usvd_all{i} = Vr;  % store the POD basis
+    
+    % Inferred operators with stability check
+    while true
+        [operators] = inferOperators(X, U, Vr, params, R);
+        Ahat = operators.A;
+        Fhat = operators.F;
+        Bhat = operators.B;
+
+        % Check if the inferred operator is stable 
+        lambda = eig(Ahat);
+        Re_lambda = real(lambda);
+        if all(Re_lambda(:) < 0)
+            infop_all{i} = operators;  % store operators
+            break;
+        else
+            warning("For mu = %f, order of r = %d is unstable. Decrementing max order.\n", mu, rmax);
+            rmax = rmax - 1;
+            Vr = U_svd(:,1:rmax);
         end
+    end
+
+    %% For different basis sizes r, compute basis, learn model, and calculate state error 
+    for j = 1:rmax
+        r = r_vals(j);
+        Vr = U_svd(:,1:r);
+        
+        % Extract operators for inferred model
+        Fhat_extract = extractF(Fhat, r);
+        s_hat = semiImplicitEuler(Ahat(1:r,1:r),Fhat_extract,Bhat(1:r,:),dt,u_ref,Vr'*IC);
+        s_rec = Vr*s_hat;
+        err_inf(i,j) = norm(s_rec-s_ref,'fro')/norm(s_ref,'fro');
+        
+        % Extract operators for intrusive model
+        Fint_extract = extractF(Fint, r);
+        s_int = semiImplicitEuler(Aint(1:r,1:r),Fint_extract,Bint(1:r,:),dt,u_ref,Vr'*IC);
+        s_tmp = Vr*s_int;
+        err_int(i,j) = norm(s_tmp-s_ref,'fro')/norm(s_ref,'fro');
+    end
+    
+    % Update minimum stable reduced dim for plotting
+    if rmin > rmax
+        rmin = rmax;
     end
 end
 
-% check inner product
-viol = 0;
-for i = 1:10
-    randtest = rand(N,1);
-    viol = viol + abs(randtest'*H*kron(randtest,randtest));
-end
-viol
+%% Plot relative state error
+err_inf_avg = median(err_inf(:,1:rmin));
+err_int_avg = median(err_int(:,1:rmin));
 
-%% solves Burgers equation from zero initial condition with specified input
-function [s_all,A,B,F] = burgersFOM(N,dt,T_end,mu,u)
-dx = 1/(N-1);
+figure(1); clf;
+semilogy(r_vals(1:rmin),err_inf_avg, DisplayName="opinf", Marker="o", MarkerSize=8); 
+grid on; grid minor; hold on;
+semilogy(r_vals(1:rmin),err_int_avg, DisplayName="int", Marker="x", MarkerSize=5); 
+hold off; legend(Location="southwest");
+xlabel('reduced model dimension $r$','Interpreter','LaTeX')
+ylabel('Relative state reconstruction error','Interpreter','LaTeX')
+title('Burgers inferred model error (Training)','Interpreter','LaTeX')
 
-K = T_end/dt;
+%% Verify Full Models
+figure(2);
+t = tiledlayout(2,Mp/2);
+t.TileSpacing = 'compact';
+t.Padding = 'compact';
 
-[A,B,F] = getBurgersMatrices(N,dx,mu);
-ImdtA = eye(N)-dt*A;
-ImdtA(1,1:2) = [1 0]; ImdtA(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
-
-s_all = zeros(N,K+1);       % initial state is zero everywhere
-for i = 1:K
-    ssq = get_x_sq(s_all(:,i)')';
-    s_all(:,i+1) = ImdtA\([0; s_all(2:N-1,i); 0] - dt*F*ssq + dt*B*u(i));
-end
-end
-
-%% builds matrices for Burgers full-order model
-function [A, B, F] = getBurgersMatrices(N,dx,mu)
-    % construct linear operator resulting from second derivative
-    A = mu*gallery('tridiag',N,1,-2,1)/(dx^2);
-    A(1,1:2) = [1 0]; A(N,N-1:N) = [0 1]; % Dirichlet boundary conditions
-
-    % construct quadratic operator F using central difference for the
-    % derivative
-    ii = reshape(repmat(2:N-1,2,1),2*N-4,1);
-    m = 2:N-1;
-    mi = N*(N+1)/2 - (N-m).*(N-m+1)/2 - (N-m);              % this is where the xi^2 term is
-    mm = N*(N+1)/2 - (N-m).*(N-m+1)/2 - (N-m) - (N-(m-2));  % this is where the x_{i-1}^2 term is
-    jp = mi + 1;        % this is the index of the x_{i+1}*x_i term
-    jm = mm + 1;        % this is the index of the x_{i-1}*x_i term
-    jj = reshape([jp; jm],2*N-4,1);
-    vv = reshape([ones(1,N-2); -ones(1,N-2)],2*N-4,1)/(2*dx);
-    F = sparse(ii,jj,vv,N,N*(N+1)/2);
-
-    % construct input matrix B
-    B = [1; zeros(N-2,1); -1];
+for i = 1:Mp
+    nexttile
+    s = surf(linspace(0.0,T_end,K+1),linspace(0.0,1.0,N),s_ref_all{i}, ...
+        'FaceAlpha',0.8);
+    s.EdgeColor = 'none';
+    xlabel("t");
+    ylabel("x");
+    title("$\mu$ = "+mus(i),Interpreter="latex")
 end
