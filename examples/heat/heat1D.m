@@ -11,7 +11,7 @@
 %   2019 Forum, June 17-21, Dallas, TX.
 
 clear
-addpath('../src/')
+addpath('../../src/')
 
 %% Problem set-up
 T       = 1;      % final time

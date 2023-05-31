@@ -16,7 +16,7 @@
 %   2019 Forum, June 17-21, Dallas, TX.
 
 clear; close all; clc;
-addpath('../src/',"burgers-helpers/");
+addpath('../../src/',"burgers-helpers/");
 
 %% Problem set-up
 N       = 2^7+1;        % num grid points
@@ -30,7 +30,7 @@ IC = zeros(N,1);
 Mp = 10;  % number of random inputs
 
 % POD basis size and operators
-r_vals = 1:16;
+r_vals = 1:15;
 err_inf = zeros(length(mus),length(r_vals));
 err_int = zeros(length(mus),length(r_vals));
 
