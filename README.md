@@ -73,5 +73,10 @@ The `examples` folder contains scripts that set-up and run several examples:
 * The Euler equation example from [3]. This example uses MATLAB's Curve Fitting Toolbox to generate the random initial conditions.
 * The heat equation example on a non-uniform grid from [4].
 
+## Requirements
+* MATLAB Signal Processing Toolbox
+* MATLAB Curve Fitting Toolbox
+* MATLAB 2019a or newer
+
 ---
 This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@caltech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) also contributed to this code.
