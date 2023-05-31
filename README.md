@@ -79,4 +79,4 @@ The `examples` folder contains scripts that set-up and run several examples:
 * MATLAB 2019a or newer
 
 ---
-This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@caltech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) also contributed to this code.
+This code was developed in MATLAB R2019a and is in a beta state. Please contact Elizabeth Qian (eqian@gatech.edu) with any questions or comments. [Boris Kramer](http://kramer.ucsd.edu/) and Tomoki Koike also contributed to this code.
